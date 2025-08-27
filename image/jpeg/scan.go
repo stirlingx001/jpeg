@@ -49,6 +49,11 @@ func (d *decoder) makeImg(mxx, myy int) {
 
 // Specified in section B.2.3.
 func (d *decoder) processSOS(n int) error {
+	d.aux.SOSStart = d.bytes.readBytes
+	d.aux.SOSN = n
+	defer func() {
+		d.aux.SOSLen = d.bytes.readBytes - d.aux.SOSStart
+	}()
 	if d.nComp == 0 {
 		return FormatError("missing SOF marker")
 	}

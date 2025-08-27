@@ -103,7 +103,11 @@ type bits struct {
 }
 
 type Auxiliary struct {
-	Quant [nQuantIndex][blockSize]byte
+	DQTStart, DQTN, DQTLen int
+	SOFStart, SOFN, SOFLen int
+	DHTStart, DHTN, DHTLen int
+	SOSStart, SOSN, SOSLen int
+	Quant                  [nQuantIndex][blockSize]byte
 }
 
 type decoder struct {
@@ -120,6 +124,7 @@ type decoder struct {
 		// nUnreadable is the number of bytes to back up i after
 		// overshooting. It can be 0, 1 or 2.
 		nUnreadable int
+		readBytes   int
 	}
 	width, height int
 
@@ -185,6 +190,7 @@ func (d *decoder) fill() error {
 // can happen when expecting to read a 0xff 0x00 byte-stuffed byte.
 func (d *decoder) unreadByteStuffedByte() {
 	d.bytes.i -= d.bytes.nUnreadable
+	d.bytes.readBytes -= d.bytes.nUnreadable
 	d.bytes.nUnreadable = 0
 	if d.bits.n >= 8 {
 		d.bits.a >>= 8
@@ -203,6 +209,7 @@ func (d *decoder) readByte() (x byte, err error) {
 	}
 	x = d.bytes.buf[d.bytes.i]
 	d.bytes.i++
+	d.bytes.readBytes++
 	d.bytes.nUnreadable = 0
 	return x, nil
 }
@@ -217,6 +224,7 @@ func (d *decoder) readByteStuffedByte() (x byte, err error) {
 	if d.bytes.i+2 <= d.bytes.j {
 		x = d.bytes.buf[d.bytes.i]
 		d.bytes.i++
+		d.bytes.readBytes++
 		d.bytes.nUnreadable = 1
 		if x != 0xff {
 			return x, err
@@ -225,6 +233,7 @@ func (d *decoder) readByteStuffedByte() (x byte, err error) {
 			return 0, errMissingFF00
 		}
 		d.bytes.i++
+		d.bytes.readBytes++
 		d.bytes.nUnreadable = 2
 		return 0xff, nil
 	}
@@ -266,6 +275,7 @@ func (d *decoder) readFull(p []byte) error {
 		n := copy(p, d.bytes.buf[d.bytes.i:d.bytes.j])
 		p = p[n:]
 		d.bytes.i += n
+		d.bytes.readBytes += n
 		if len(p) == 0 {
 			break
 		}
@@ -292,6 +302,7 @@ func (d *decoder) ignore(n int) error {
 			m = n
 		}
 		d.bytes.i += m
+		d.bytes.readBytes += m
 		n -= m
 		if n == 0 {
 			break
@@ -305,6 +316,11 @@ func (d *decoder) ignore(n int) error {
 
 // Specified in section B.2.2.
 func (d *decoder) processSOF(n int) error {
+	d.aux.SOFStart = d.bytes.readBytes
+	d.aux.SOFN = n
+	defer func() {
+		d.aux.SOFLen = d.bytes.readBytes - d.aux.SOFStart
+	}()
 	if d.nComp != 0 {
 		return FormatError("multiple SOF markers")
 	}
@@ -429,6 +445,12 @@ func (d *decoder) processSOF(n int) error {
 
 // Specified in section B.2.4.1.
 func (d *decoder) processDQT(n int) error {
+	d.aux.DQTStart = d.bytes.readBytes
+	d.aux.DQTN = n
+	defer func() {
+		d.aux.DQTLen = d.bytes.readBytes - d.aux.DQTStart
+	}()
+
 loop:
 	for n > 0 {
 		n--
@@ -476,6 +498,7 @@ loop:
 	if n != 0 {
 		return FormatError("DQT has wrong length")
 	}
+
 	return nil
 }
 

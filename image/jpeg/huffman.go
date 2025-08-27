@@ -89,6 +89,11 @@ func (d *decoder) receiveExtend(t uint8) (int32, error) {
 // processDHT processes a Define Huffman Table marker, and initializes a huffman
 // struct from its contents. Specified in section B.2.4.2.
 func (d *decoder) processDHT(n int) error {
+	d.aux.DHTStart = d.bytes.readBytes
+	d.aux.DHTN = n
+	defer func() {
+		d.aux.DHTLen = d.bytes.readBytes - d.aux.DHTStart
+	}()
 	for n > 0 {
 		if n < 17 {
 			return FormatError("DHT has wrong length")

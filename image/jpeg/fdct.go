@@ -81,6 +81,12 @@ const (
 	centerJSample = 128
 )
 
+func FDct(b [64]int32) [64]int32 {
+	var newBlock block
+	fdct(&newBlock)
+	return newBlock
+}
+
 // fdct performs a forward DCT on an 8x8 block of coefficients, including a
 // level shift.
 func fdct(b *block) {
