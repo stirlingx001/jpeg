@@ -102,6 +102,10 @@ type bits struct {
 	n int32  // the number of unread bits in a.
 }
 
+type Auxiliary struct {
+	Quant [nQuantIndex][blockSize]byte
+}
+
 type decoder struct {
 	r    io.Reader
 	bits bits
@@ -145,6 +149,8 @@ type decoder struct {
 	huff       [maxTc + 1][maxTh + 1]huffman
 	quant      [maxTq + 1]block // Quantization tables, in zig-zag order.
 	tmp        [2 * blockSize]byte
+
+	aux *Auxiliary
 }
 
 // fill fills up the d.bytes.buf buffer from the underlying io.Reader. It
@@ -448,6 +454,9 @@ loop:
 			for i := range d.quant[tq] {
 				d.quant[tq][i] = int32(d.tmp[i])
 			}
+			copy(d.aux.Quant[tq][:], d.tmp[:blockSize])
+			//fmt.Printf("quant_0x: %x\n", d.tmp[:blockSize])
+
 		case 1:
 			if n < 2*blockSize {
 				break loop
@@ -459,6 +468,9 @@ loop:
 			for i := range d.quant[tq] {
 				d.quant[tq][i] = int32(d.tmp[2*i])<<8 | int32(d.tmp[2*i+1])
 			}
+			copy(d.aux.Quant[tq%2][:], d.tmp[:blockSize])
+
+			//fmt.Printf("quant_2x: %x\n", d.tmp[:2*blockSize])
 		}
 	}
 	if n != 0 {
@@ -517,22 +529,23 @@ func (d *decoder) processApp14Marker(n int) error {
 }
 
 // decode reads a JPEG image from r and returns it as an image.Image.
-func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, error) {
+func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, *Auxiliary, error) {
 	d.r = r
+	d.aux = &Auxiliary{}
 
 	// Check for the Start Of Image marker.
 	if err := d.readFull(d.tmp[:2]); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if d.tmp[0] != 0xff || d.tmp[1] != soiMarker {
-		return nil, FormatError("missing SOI marker")
+		return nil, nil, FormatError("missing SOI marker")
 	}
 
 	// Process the remaining segments until the End Of Image marker.
 	for {
 		err := d.readFull(d.tmp[:2])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for d.tmp[0] != 0xff {
 			// Strictly speaking, this is a format error. However, libjpeg is
@@ -558,7 +571,7 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, error) {
 			d.tmp[0] = d.tmp[1]
 			d.tmp[1], err = d.readByte()
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		marker := d.tmp[1]
@@ -571,7 +584,7 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, error) {
 			// number of fill bytes, which are bytes assigned code X'FF'".
 			marker, err = d.readByte()
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		if marker == eoiMarker { // End Of Image.
@@ -590,11 +603,11 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, error) {
 		// Read the 16-bit length of the segment. The value includes the 2 bytes for the
 		// length itself, so we subtract 2 to get the number of remaining bytes.
 		if err = d.readFull(d.tmp[:2]); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		n := int(d.tmp[0])<<8 + int(d.tmp[1]) - 2
 		if n < 0 {
-			return nil, FormatError("short segment length")
+			return nil, nil, FormatError("short segment length")
 		}
 
 		switch marker {
@@ -603,7 +616,7 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, error) {
 			d.progressive = marker == sof2Marker
 			err = d.processSOF(n)
 			if configOnly && d.jfif {
-				return nil, err
+				return nil, nil, err
 			}
 		case dhtMarker:
 			if configOnly {
@@ -619,7 +632,7 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, error) {
 			}
 		case sosMarker:
 			if configOnly {
-				return nil, nil
+				return nil, nil, nil
 			}
 			err = d.processSOS(n)
 		case driMarker:
@@ -642,27 +655,29 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, error) {
 			}
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	if d.progressive {
 		if err := d.reconstructProgressiveImage(); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	if d.img1 != nil {
-		return d.img1, nil
+		return d.img1, d.aux, nil
 	}
 	if d.img3 != nil {
 		if d.blackPix != nil {
-			return d.applyBlack()
+			image, err := d.applyBlack()
+			return image, d.aux, err
 		} else if d.isRGB() {
-			return d.convertToRGB()
+			image, err := d.convertToRGB()
+			return image, d.aux, err
 		}
-		return d.img3, nil
+		return d.img3, d.aux, nil
 	}
-	return nil, FormatError("missing SOS marker")
+	return nil, nil, FormatError("missing SOS marker")
 }
 
 // applyBlack combines d.img3 and d.blackPix into a CMYK image. The formula
@@ -770,6 +785,12 @@ func (d *decoder) convertToRGB() (image.Image, error) {
 // Decode reads a JPEG image from r and returns it as an [image.Image].
 func Decode(r io.Reader) (image.Image, error) {
 	var d decoder
+	img, _, err := d.decode(r, false)
+	return img, err
+}
+
+func Decode2(r io.Reader) (image.Image, *Auxiliary, error) {
+	var d decoder
 	return d.decode(r, false)
 }
 
@@ -777,7 +798,7 @@ func Decode(r io.Reader) (image.Image, error) {
 // decoding the entire image.
 func DecodeConfig(r io.Reader) (image.Config, error) {
 	var d decoder
-	if _, err := d.decode(r, true); err != nil {
+	if _, _, err := d.decode(r, true); err != nil {
 		return image.Config{}, err
 	}
 	switch d.nComp {

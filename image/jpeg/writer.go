@@ -309,6 +309,9 @@ func (e *encoder) writeDQT() {
 		e.writeByte(uint8(i))
 		e.write(e.quant[i][:])
 	}
+
+	//fmt.Printf("quant0: %x\n", e.quant[0])
+	//fmt.Printf("quant1: %x\n", e.quant[1])
 }
 
 // writeSOF0 writes the Start Of Frame (Baseline Sequential) marker.
@@ -568,6 +571,7 @@ const DefaultQuality = 75
 // Quality ranges from 1 to 100 inclusive, higher is better.
 type Options struct {
 	Quality int
+	Quant   [nQuantIndex][blockSize]byte
 }
 
 // Encode writes the Image m to w in JPEG 4:2:0 baseline format with the given
@@ -613,6 +617,52 @@ func Encode(w io.Writer, m image.Image, o *Options) error {
 			e.quant[i][j] = uint8(x)
 		}
 	}
+	// Compute number of components based on input image type.
+	nComponent := 3
+	switch m.(type) {
+	// TODO(wathiede): switch on m.ColorModel() instead of type.
+	case *image.Gray:
+		nComponent = 1
+	}
+	// Write the Start Of Image marker.
+	e.buf[0] = 0xff
+	e.buf[1] = 0xd8
+	e.write(e.buf[:2])
+	// Write the quantization tables.
+	e.writeDQT()
+	// Write the image dimensions.
+	e.writeSOF0(b.Size(), nComponent)
+	// Write the Huffman tables.
+	e.writeDHT(nComponent)
+	// Write the image data.
+	e.writeSOS(m)
+	// Write the End Of Image marker.
+	e.buf[0] = 0xff
+	e.buf[1] = 0xd9
+	e.write(e.buf[:2])
+	e.flush()
+	return e.err
+}
+
+func Encode2(w io.Writer, m image.Image, o *Options) error {
+	b := m.Bounds()
+	if b.Dx() >= 1<<16 || b.Dy() >= 1<<16 {
+		return errors.New("jpeg: image is too large to encode")
+	}
+	var e encoder
+	if ww, ok := w.(writer); ok {
+		e.w = ww
+	} else {
+		e.w = bufio.NewWriter(w)
+	}
+
+	// Initialize the quantization tables.
+	for i := range e.quant {
+		for j := range e.quant[i] {
+			e.quant[i][j] = o.Quant[i][j]
+		}
+	}
+
 	// Compute number of components based on input image type.
 	nComponent := 3
 	switch m.(type) {
