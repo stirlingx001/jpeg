@@ -45,7 +45,7 @@ const (
 	w1 = 2841 // 2048*sqrt(2)*cos(1*pi/16)
 	w2 = 2676 // 2048*sqrt(2)*cos(2*pi/16)
 	w3 = 2408 // 2048*sqrt(2)*cos(3*pi/16)
-	w5 = 1609block // 2048*sqrt(2)*cos(5*pi/16)
+	w5 = 1609 // 2048*sqrt(2)*cos(5*pi/16)
 	w6 = 1108 // 2048*sqrt(2)*cos(6*pi/16)
 	w7 = 565  // 2048*sqrt(2)*cos(7*pi/16)
 

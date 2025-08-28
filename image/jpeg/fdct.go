@@ -83,6 +83,7 @@ const (
 
 func FDct(b [64]int32) [64]int32 {
 	var newBlock block
+	copy(newBlock[:], b[:])
 	fdct(&newBlock)
 	return newBlock
 }
@@ -127,6 +128,7 @@ func fdct(b *block) {
 
 		tmp10 = tmp0 + tmp3
 		tmp11 = tmp1 + tmp2
+
 		tmp12 = tmp0 + tmp2
 		tmp13 = tmp1 + tmp3
 		z1 = (tmp12 + tmp13) * fix_1_175875602
