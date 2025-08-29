@@ -26,8 +26,12 @@ type Huffman struct {
 	// are 1 plus the code length, or 0 if the value is too large to fit in
 	// lutSize bits.
 	Lut [1 << lutSize]uint16
-	// vals are the decoded values, sorted by their encoding.
-	vals [maxNCodes]uint8
+
+	// count[i] is the number of codes of length i+1 bits.
+	Count [16]uint8
+
+	// Vals are the decoded values, sorted by their encoding.
+	Vals [maxNCodes]uint8
 	// minCodes[i] is the minimum code of length i, or -1 if there are no
 	// codes of that length.
 	minCodes [maxCodeLength]int32
@@ -112,7 +116,7 @@ func (d *decoder) processDHT(n int) error {
 		}
 		h := &d.huff[tc][th]
 
-		// Read nCodes and h.vals (and derive h.nCodes).
+		// Read nCodes and h.Vals (and derive h.nCodes).
 		// nCodes[i] is the number of codes with code length i.
 		// h.nCodes is the total number of codes.
 		h.nCodes = 0
@@ -121,6 +125,8 @@ func (d *decoder) processDHT(n int) error {
 			nCodes[i] = int32(d.tmp[i+1])
 			h.nCodes += nCodes[i]
 		}
+		copy(h.Count[:], d.tmp[1:17])
+
 		if h.nCodes == 0 {
 			return FormatError("Huffman table has zero length")
 		}
@@ -131,7 +137,7 @@ func (d *decoder) processDHT(n int) error {
 		if n < 0 {
 			return FormatError("DHT has wrong length")
 		}
-		if err := d.readFull(h.vals[:h.nCodes]); err != nil {
+		if err := d.readFull(h.Vals[:h.nCodes]); err != nil {
 			return err
 		}
 
@@ -147,7 +153,7 @@ func (d *decoder) processDHT(n int) error {
 				// The high 8 bits of lutValue are the encoded value.
 				// The low 8 bits are 1 plus the codeLength.
 				base := uint8(code << (7 - i))
-				lutValue := uint16(h.vals[x])<<8 | uint16(2+i)
+				lutValue := uint16(h.Vals[x])<<8 | uint16(2+i)
 				for k := uint8(0); k < 1<<(7-i); k++ {
 					h.Lut[base|k] = lutValue
 				}
@@ -217,7 +223,7 @@ slowPath:
 		d.bits.n--
 		d.bits.m >>= 1
 		if code <= h.maxCodes[i] {
-			return h.vals[h.valsIndices[i]+code-h.minCodes[i]], nil
+			return h.Vals[h.valsIndices[i]+code-h.minCodes[i]], nil
 		}
 		code <<= 1
 	}

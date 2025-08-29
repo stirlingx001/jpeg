@@ -271,7 +271,7 @@ func (d *decoder) processSOS(n int) error {
 									if err != nil {
 										return err
 									}
-									b[unzig[zig]] = ac << al
+									b[Unzig[zig]] = ac << al
 								} else {
 									if val0 != 0x0f {
 										d.eobRun = uint16(1 << val0)
@@ -402,7 +402,7 @@ func (d *decoder) refine(b *block, h *Huffman, zigStart, zigEnd, delta int32) er
 				return FormatError("too many coefficients")
 			}
 			if z != 0 {
-				b[unzig[zig]] = z
+				b[Unzig[zig]] = z
 			}
 		}
 	}
@@ -419,7 +419,7 @@ func (d *decoder) refine(b *block, h *Huffman, zigStart, zigEnd, delta int32) er
 // the first nz zero entries are skipped over.
 func (d *decoder) refineNonZeroes(b *block, zig, zigEnd, nz, delta int32) (int32, error) {
 	for ; zig <= zigEnd; zig++ {
-		u := unzig[zig]
+		u := Unzig[zig]
 		if b[u] == 0 {
 			if nz == 0 {
 				break
@@ -471,7 +471,7 @@ func (d *decoder) reconstructProgressiveImage() error {
 func (d *decoder) reconstructBlock(b *block, bx, by, compIndex int) error {
 	qt := &d.quant[d.comp[compIndex].tq]
 	for zig := 0; zig < blockSize; zig++ {
-		b[unzig[zig]] *= qt[zig]
+		b[Unzig[zig]] *= qt[zig]
 	}
 	idct(b)
 	dst, stride := []byte(nil), 0

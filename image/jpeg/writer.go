@@ -20,8 +20,8 @@ func Div(a, b int32) int32 {
 	return -((-a + (b >> 1)) / b)
 }
 
-// bitCount counts the number of bits needed to hold an integer.
-var bitCount = [256]byte{
+// BitCount counts the number of bits needed to hold an integer.
+var BitCount = [256]byte{
 	0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
 	5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
 	6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
@@ -282,9 +282,9 @@ func (e *encoder) emitHuffRLE(h huffIndex, runLength, value int32) {
 	}
 	var nBits uint32
 	if a < 0x100 {
-		nBits = uint32(bitCount[a])
+		nBits = uint32(BitCount[a])
 	} else {
-		nBits = 8 + uint32(bitCount[a>>8])
+		nBits = 8 + uint32(BitCount[a>>8])
 	}
 	e.emitHuff(h, runLength<<4|int32(nBits))
 	if nBits > 0 {
@@ -370,7 +370,7 @@ func (e *encoder) writeBlock(b *block, q quantIndex, prevDC int32) int32 {
 	// Emit the AC components.
 	h, runLength := huffIndex(2*q+1), int32(0)
 	for zig := 1; zig < blockSize; zig++ {
-		ac := Div(b[unzig[zig]], 8*int32(e.quant[q][zig]))
+		ac := Div(b[Unzig[zig]], 8*int32(e.quant[q][zig]))
 		if ac == 0 {
 			runLength++
 		} else {

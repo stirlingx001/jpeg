@@ -72,10 +72,10 @@ const (
 	adobeTransformYCbCrK  = 2
 )
 
-// unzig maps from the zig-zag ordering to the natural ordering. For example,
-// unzig[3] is the column and row of the fourth element in zig-zag order. The
+// Unzig maps from the zig-zag ordering to the natural ordering. For example,
+// Unzig[3] is the column and row of the fourth element in zig-zag order. The
 // value is 16, which means first column (16%8 == 0) and third row (16/8 == 2).
-var unzig = [blockSize]int{
+var Unzig = [blockSize]int{
 	0, 1, 8, 16, 9, 2, 3, 10,
 	17, 24, 32, 25, 18, 11, 4, 5,
 	12, 19, 26, 33, 40, 48, 41, 34,
@@ -705,8 +705,16 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, *Auxiliary,
 			return image, d.aux, err
 		} else if d.isRGB() {
 			image, err := d.convertToRGB()
+			d.aux.NComp = d.nComp
+			d.aux.Img3 = d.img3
+			d.aux.Huff = d.huff
+			d.aux.Quant = d.quant
 			return image, d.aux, err
 		}
+		d.aux.NComp = d.nComp
+		d.aux.Img3 = d.img3
+		d.aux.Huff = d.huff
+		d.aux.Quant = d.quant
 		return d.img3, d.aux, nil
 	}
 	return nil, nil, FormatError("missing SOS marker")
@@ -811,10 +819,6 @@ func (d *decoder) convertToRGB() (image.Image, error) {
 			img.Pix[po+4*i+3] = 255
 		}
 	}
-	d.aux.NComp = d.nComp
-	d.aux.Img3 = d.img3
-	d.aux.Huff = d.huff
-	d.aux.Quant = d.quant
 	return img, nil
 }
 

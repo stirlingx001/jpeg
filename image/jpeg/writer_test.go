@@ -34,11 +34,11 @@ var zigzag = [blockSize]int{
 
 func TestZigUnzig(t *testing.T) {
 	for i := 0; i < blockSize; i++ {
-		if unzig[zigzag[i]] != i {
-			t.Errorf("unzig[zigzag[%d]] == %d", i, unzig[zigzag[i]])
+		if Unzig[zigzag[i]] != i {
+			t.Errorf("Unzig[zigzag[%d]] == %d", i, Unzig[zigzag[i]])
 		}
-		if zigzag[unzig[i]] != i {
-			t.Errorf("zigzag[unzig[%d]] == %d", i, zigzag[unzig[i]])
+		if zigzag[Unzig[i]] != i {
+			t.Errorf("zigzag[Unzig[%d]] == %d", i, zigzag[Unzig[i]])
 		}
 	}
 }
@@ -75,7 +75,7 @@ func TestUnscaledQuant(t *testing.T) {
 	for i := quantIndex(0); i < nQuantIndex; i++ {
 		for zig := 0; zig < blockSize; zig++ {
 			got := unscaledQuant[i][zig]
-			want := unscaledQuantInNaturalOrder[i][unzig[zig]]
+			want := unscaledQuantInNaturalOrder[i][Unzig[zig]]
 			if got != want {
 				t.Errorf("i=%d, zig=%d: got %d, want %d", i, zig, got, want)
 				bad = true
@@ -88,7 +88,7 @@ func TestUnscaledQuant(t *testing.T) {
 		for i, name := range names {
 			fmt.Fprintf(buf, "// %s.\n{\n", name)
 			for zig := 0; zig < blockSize; zig++ {
-				fmt.Fprintf(buf, "%d, ", unscaledQuantInNaturalOrder[i][unzig[zig]])
+				fmt.Fprintf(buf, "%d, ", unscaledQuantInNaturalOrder[i][Unzig[zig]])
 				if zig%8 == 7 {
 					buf.WriteString("\n")
 				}
