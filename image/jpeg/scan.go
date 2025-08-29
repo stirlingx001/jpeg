@@ -339,7 +339,7 @@ func (d *decoder) processSOS(n int) error {
 
 // refine decodes a successive approximation refinement block, as specified in
 // section G.1.2.
-func (d *decoder) refine(b *block, h *huffman, zigStart, zigEnd, delta int32) error {
+func (d *decoder) refine(b *block, h *Huffman, zigStart, zigEnd, delta int32) error {
 	// Refining a DC component is trivial.
 	if zigStart == 0 {
 		if zigEnd != 0 {

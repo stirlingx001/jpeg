@@ -102,12 +102,21 @@ type bits struct {
 	n int32  // the number of unread bits in a.
 }
 
+type BitStreamItem struct {
+	Bits int
+	Len  int
+}
+
 type Auxiliary struct {
 	DQTStart, DQTN, DQTLen int
 	SOFStart, SOFN, SOFLen int
 	DHTStart, DHTN, DHTLen int
 	SOSStart, SOSN, SOSLen int
-	Quant                  [nQuantIndex][blockSize]byte
+
+	NComp int
+	Quant [maxTq + 1]block
+	Huff  [maxTc + 1][maxTh + 1]Huffman
+	Img3  *image.YCbCr
 }
 
 type decoder struct {
@@ -151,7 +160,7 @@ type decoder struct {
 
 	comp       [maxComponents]component
 	progCoeffs [maxComponents][]block // Saved state between progressive-mode scans.
-	huff       [maxTc + 1][maxTh + 1]huffman
+	huff       [maxTc + 1][maxTh + 1]Huffman
 	quant      [maxTq + 1]block // Quantization tables, in zig-zag order.
 	tmp        [2 * blockSize]byte
 
@@ -476,7 +485,7 @@ loop:
 			for i := range d.quant[tq] {
 				d.quant[tq][i] = int32(d.tmp[i])
 			}
-			copy(d.aux.Quant[tq][:], d.tmp[:blockSize])
+			//copy(d.aux.Quant[tq][:], d.tmp[:blockSize])
 			//fmt.Printf("quant_0x: %x\n", d.tmp[:blockSize])
 
 		case 1:
@@ -490,7 +499,7 @@ loop:
 			for i := range d.quant[tq] {
 				d.quant[tq][i] = int32(d.tmp[2*i])<<8 | int32(d.tmp[2*i+1])
 			}
-			copy(d.aux.Quant[tq%2][:], d.tmp[:blockSize])
+			//copy(d.aux.Quant[tq%2][:], d.tmp[:blockSize])
 
 			//fmt.Printf("quant_2x: %x\n", d.tmp[:2*blockSize])
 		}
@@ -802,6 +811,10 @@ func (d *decoder) convertToRGB() (image.Image, error) {
 			img.Pix[po+4*i+3] = 255
 		}
 	}
+	d.aux.NComp = d.nComp
+	d.aux.Img3 = d.img3
+	d.aux.Huff = d.huff
+	d.aux.Quant = d.quant
 	return img, nil
 }
 

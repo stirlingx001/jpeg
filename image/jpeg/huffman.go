@@ -17,15 +17,15 @@ const maxNCodes = 256
 // lutSize is the log-2 size of the Huffman decoder's look-up table.
 const lutSize = 8
 
-// huffman is a Huffman decoder, specified in section C.
-type huffman struct {
+// Huffman is a Huffman decoder, specified in section C.
+type Huffman struct {
 	// length is the number of codes in the tree.
 	nCodes int32
-	// lut is the look-up table for the next lutSize bits in the bit-stream.
+	// Lut is the look-up table for the next lutSize bits in the bit-stream.
 	// The high 8 bits of the uint16 are the encoded value. The low 8 bits
 	// are 1 plus the code length, or 0 if the value is too large to fit in
 	// lutSize bits.
-	lut [1 << lutSize]uint16
+	Lut [1 << lutSize]uint16
 	// vals are the decoded values, sorted by their encoding.
 	vals [maxNCodes]uint8
 	// minCodes[i] is the minimum code of length i, or -1 if there are no
@@ -86,7 +86,7 @@ func (d *decoder) receiveExtend(t uint8) (int32, error) {
 	return x, nil
 }
 
-// processDHT processes a Define Huffman Table marker, and initializes a huffman
+// processDHT processes a Define Huffman Table marker, and initializes a Huffman
 // struct from its contents. Specified in section B.2.4.2.
 func (d *decoder) processDHT(n int) error {
 	d.aux.DHTStart = d.bytes.readBytes
@@ -136,7 +136,7 @@ func (d *decoder) processDHT(n int) error {
 		}
 
 		// Derive the look-up table.
-		clear(h.lut[:])
+		clear(h.Lut[:])
 		var x, code uint32
 		for i := uint32(0); i < lutSize; i++ {
 			code <<= 1
@@ -149,7 +149,7 @@ func (d *decoder) processDHT(n int) error {
 				base := uint8(code << (7 - i))
 				lutValue := uint16(h.vals[x])<<8 | uint16(2+i)
 				for k := uint8(0); k < 1<<(7-i); k++ {
-					h.lut[base|k] = lutValue
+					h.Lut[base|k] = lutValue
 				}
 				code++
 				x++
@@ -178,7 +178,7 @@ func (d *decoder) processDHT(n int) error {
 
 // decodeHuffman returns the next Huffman-coded value from the bit-stream,
 // decoded according to h.
-func (d *decoder) decodeHuffman(h *huffman) (uint8, error) {
+func (d *decoder) decodeHuffman(h *Huffman) (uint8, error) {
 	if h.nCodes == 0 {
 		return 0, FormatError("uninitialized Huffman table")
 	}
@@ -197,7 +197,7 @@ func (d *decoder) decodeHuffman(h *huffman) (uint8, error) {
 			goto slowPath
 		}
 	}
-	if v := h.lut[(d.bits.a>>uint32(d.bits.n-lutSize))&0xff]; v != 0 {
+	if v := h.Lut[(d.bits.a>>uint32(d.bits.n-lutSize))&0xff]; v != 0 {
 		n := (v & 0xff) - 1
 		d.bits.n -= int32(n)
 		d.bits.m >>= n
