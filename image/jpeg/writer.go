@@ -12,8 +12,8 @@ import (
 	"io"
 )
 
-// div returns a/b rounded to the nearest integer, instead of rounded to zero.
-func div(a, b int32) int32 {
+// Div returns a/b rounded to the nearest integer, instead of rounded to zero.
+func Div(a, b int32) int32 {
 	if a >= 0 {
 		return (a + (b >> 1)) / b
 	}
@@ -365,12 +365,12 @@ func (e *encoder) writeDHT(nComponent int) {
 func (e *encoder) writeBlock(b *block, q quantIndex, prevDC int32) int32 {
 	fdct(b)
 	// Emit the DC delta.
-	dc := div(b[0], 8*int32(e.quant[q][0]))
+	dc := Div(b[0], 8*int32(e.quant[q][0]))
 	e.emitHuffRLE(huffIndex(2*q+0), 0, dc-prevDC)
 	// Emit the AC components.
 	h, runLength := huffIndex(2*q+1), int32(0)
 	for zig := 1; zig < blockSize; zig++ {
-		ac := div(b[unzig[zig]], 8*int32(e.quant[q][zig]))
+		ac := Div(b[unzig[zig]], 8*int32(e.quant[q][zig]))
 		if ac == 0 {
 			runLength++
 		} else {
@@ -417,6 +417,10 @@ func grayToY(m *image.Gray, p image.Point, yBlock *block) {
 			yBlock[8*j+i] = int32(pix[idx])
 		}
 	}
+}
+
+func RgbaToYCbCr(m *image.RGBA, p image.Point, yBlock, cbBlock, crBlock *block) {
+	rgbaToYCbCr(m, p, yBlock, cbBlock, crBlock)
 }
 
 // rgbaToYCbCr is a specialized version of toYCbCr for image.RGBA images.

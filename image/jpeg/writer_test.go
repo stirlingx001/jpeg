@@ -5,6 +5,7 @@
 package jpeg
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"image"
@@ -286,4 +287,25 @@ func BenchmarkEncodeYCbCr(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Encode(io.Discard, img, options)
 	}
+}
+
+func TestWriteBlock(t *testing.T) {
+	var buffer bytes.Buffer
+	w := bufio.NewWriter(&buffer)
+	e := encoder{
+		w: w,
+	}
+	for i := 0; i < 64; i++ {
+		e.quant[0][i] = 3
+		e.quant[1][i] = 3
+	}
+	var b block
+	for i := 0; i < 64; i++ {
+		b[i] = 200
+	}
+	dc := e.writeBlock(&b, 0, 63)
+	e.emit(0x7f, 7)
+	w.Flush()
+	t.Logf("dc: %v", dc)
+	t.Logf("encoded: %x", buffer.Bytes())
 }
