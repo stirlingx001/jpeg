@@ -16,10 +16,10 @@ func (d *decoder) makeImg(mxx, myy int) {
 		return
 	}
 
-	h0 := d.comp[0].h
-	v0 := d.comp[0].v
-	hRatio := h0 / d.comp[1].h
-	vRatio := v0 / d.comp[1].v
+	h0 := d.comp[0].H
+	v0 := d.comp[0].V
+	hRatio := h0 / d.comp[1].H
+	vRatio := v0 / d.comp[1].V
 	var subsampleRatio image.YCbCrSubsampleRatio
 	switch hRatio<<4 | vRatio {
 	case 0x11:
@@ -41,7 +41,7 @@ func (d *decoder) makeImg(mxx, myy int) {
 	d.img3 = m.SubImage(image.Rect(0, 0, d.width, d.height)).(*image.YCbCr)
 
 	if d.nComp == 4 {
-		h3, v3 := d.comp[3].h, d.comp[3].v
+		h3, v3 := d.comp[3].H, d.comp[3].V
 		d.blackPix = make([]byte, 8*h3*mxx*8*v3*myy)
 		d.blackStride = 8 * h3 * mxx
 	}
@@ -77,25 +77,25 @@ func (d *decoder) processSOS(n int) error {
 		cs := d.tmp[1+2*i] // Component selector.
 		compIndex := -1
 		for j, comp := range d.comp[:d.nComp] {
-			if cs == comp.c {
+			if cs == comp.C {
 				compIndex = j
 			}
 		}
 		if compIndex < 0 {
-			return FormatError("unknown component selector")
+			return FormatError("unknown Component selector")
 		}
 		scan[i].compIndex = uint8(compIndex)
 		// Section B.2.3 states that "the Value of Cs_j shall be different from
 		// the values of Cs_1 through Cs_(j-1)". Since we have previously
-		// verified that a frame's component identifiers (C_i values in section
+		// verified that a frame's Component identifiers (C_i values in section
 		// B.2.2) are unique, it suffices to check that the implicit indexes
 		// into d.comp are unique.
 		for j := 0; j < i; j++ {
 			if scan[i].compIndex == scan[j].compIndex {
-				return FormatError("repeated component selector")
+				return FormatError("repeated Component selector")
 			}
 		}
-		totalHV += d.comp[compIndex].h * d.comp[compIndex].v
+		totalHV += d.comp[compIndex].H * d.comp[compIndex].V
 
 		// The baseline t <= 1 restriction is specified in table B.3.
 		scan[i].td = d.tmp[2+2*i] >> 4
@@ -107,7 +107,7 @@ func (d *decoder) processSOS(n int) error {
 			return FormatError("bad Ta Value")
 		}
 	}
-	// Section B.2.3 states that if there is more than one component then the
+	// Section B.2.3 states that if there is more than one Component then the
 	// total H*V values in a scan must be <= 10.
 	if d.nComp > 1 && totalHV > 10 {
 		return FormatError("total sampling factors too large")
@@ -121,7 +121,7 @@ func (d *decoder) processSOS(n int) error {
 	// aspects of progression. Spectral selection progression is when not
 	// all of a Block's 64 DCT coefficients are transmitted in one pass.
 	// For example, three passes could transmit coefficient 0 (the DC
-	// component), coefficients 1-5, and coefficients 6-63, in zig-zag
+	// Component), coefficients 1-5, and coefficients 6-63, in zig-zag
 	// order. Successive approximation is when not all of the bits of a
 	// band of coefficients are transmitted in one pass. For example,
 	// three passes could transmit the 6 most significant bits, followed
@@ -140,7 +140,7 @@ func (d *decoder) processSOS(n int) error {
 			return FormatError("bad spectral selection bounds")
 		}
 		if zigStart != 0 && nComp != 1 {
-			return FormatError("progressive AC coefficients for more than one component")
+			return FormatError("progressive AC coefficients for more than one Component")
 		}
 		if ah != 0 && ah != al+1 {
 			return FormatError("bad successive approximation values")
@@ -148,7 +148,7 @@ func (d *decoder) processSOS(n int) error {
 	}
 
 	// mxx and myy are the number of MCUs (Minimum Coded Units) in the image.
-	h0, v0 := d.comp[0].h, d.comp[0].v // The h and v values from the Y components.
+	h0, v0 := d.comp[0].H, d.comp[0].V // The H and V values from the Y components.
 	mxx := (d.width + 8*h0 - 1) / (8 * h0)
 	myy := (d.height + 8*v0 - 1) / (8 * v0)
 	if d.img1 == nil && d.img3 == nil {
@@ -158,7 +158,7 @@ func (d *decoder) processSOS(n int) error {
 		for i := 0; i < nComp; i++ {
 			compIndex := scan[i].compIndex
 			if d.progCoeffs[compIndex] == nil {
-				d.progCoeffs[compIndex] = make([]Block, mxx*myy*d.comp[compIndex].h*d.comp[compIndex].v)
+				d.progCoeffs[compIndex] = make([]Block, mxx*myy*d.comp[compIndex].H*d.comp[compIndex].V)
 			}
 		}
 	}
@@ -178,8 +178,8 @@ func (d *decoder) processSOS(n int) error {
 		for mx := 0; mx < mxx; mx++ {
 			for i := 0; i < nComp; i++ {
 				compIndex := scan[i].compIndex
-				hi := d.comp[compIndex].h
-				vi := d.comp[compIndex].v
+				hi := d.comp[compIndex].H
+				vi := d.comp[compIndex].V
 				for j := 0; j < hi*vi; j++ {
 					// The blocks are traversed one MCU at a time. For 4:2:0 chroma
 					// subsampling, there are four Y 8x8 blocks in every 16x16 MCU.
@@ -194,7 +194,7 @@ func (d *decoder) processSOS(n int) error {
 					//	0 1 2 3
 					//	4 5 6 7
 					// Only DC scans (zigStart == 0) can be interleaved. AC scans must have
-					// only one component.
+					// only one Component.
 					//
 					// To further complicate matters, for non-interleaved scans, there is no
 					// data for any blocks that are inside the image at the MCU level but
@@ -227,7 +227,7 @@ func (d *decoder) processSOS(n int) error {
 					}
 
 					if ah != 0 {
-						if err := d.refine(&b, &d.huff[acTable][scan[i].ta], zigStart, zigEnd, 1<<al); err != nil {
+						if err := d.refine(&b, &d.huff[AcTable][scan[i].ta], zigStart, zigEnd, 1<<al); err != nil {
 							return err
 						}
 					} else {
@@ -235,12 +235,12 @@ func (d *decoder) processSOS(n int) error {
 						if zig == 0 {
 							zig++
 							// Decode the DC coefficient, as specified in section F.2.2.1.
-							value, err := d.decodeHuffman(&d.huff[dcTable][scan[i].td])
+							value, err := d.decodeHuffman(&d.huff[DcTable][scan[i].td])
 							if err != nil {
 								return err
 							}
 							if value > 16 {
-								return UnsupportedError("excessive DC component")
+								return UnsupportedError("excessive DC Component")
 							}
 							dcDelta, err := d.receiveExtend(value)
 							if err != nil {
@@ -254,7 +254,7 @@ func (d *decoder) processSOS(n int) error {
 							d.eobRun--
 						} else {
 							// Decode the AC coefficients, as specified in section F.2.2.2.
-							huff := &d.huff[acTable][scan[i].ta]
+							huff := &d.huff[AcTable][scan[i].ta]
 							for ; zig <= zigEnd; zig++ {
 								value, err := d.decodeHuffman(huff)
 								if err != nil {
@@ -340,7 +340,7 @@ func (d *decoder) processSOS(n int) error {
 // refine decodes a successive approximation refinement Block, as specified in
 // section G.1.2.
 func (d *decoder) refine(b *Block, h *Huffman, zigStart, zigEnd, delta int32) error {
-	// Refining a DC component is trivial.
+	// Refining a DC Component is trivial.
 	if zigStart == 0 {
 		if zigEnd != 0 {
 			panic("unreachable")
@@ -446,15 +446,15 @@ func (d *decoder) refineNonZeroes(b *Block, zig, zigEnd, nz, delta int32) (int32
 func (d *decoder) reconstructProgressiveImage() error {
 	// The h0, mxx, by and bx variables have the same meaning as in the
 	// processSOS method.
-	h0 := d.comp[0].h
+	h0 := d.comp[0].H
 	mxx := (d.width + 8*h0 - 1) / (8 * h0)
 	for i := 0; i < d.nComp; i++ {
 		if d.progCoeffs[i] == nil {
 			continue
 		}
-		v := 8 * d.comp[0].v / d.comp[i].v
-		h := 8 * d.comp[0].h / d.comp[i].h
-		stride := mxx * d.comp[i].h
+		v := 8 * d.comp[0].V / d.comp[i].V
+		h := 8 * d.comp[0].H / d.comp[i].H
+		stride := mxx * d.comp[i].H
 		for by := 0; by*v < d.height; by++ {
 			for bx := 0; bx*h < d.width; bx++ {
 				if err := d.reconstructBlock(&d.progCoeffs[i][by*stride+bx], bx, by, i); err != nil {
@@ -469,7 +469,7 @@ func (d *decoder) reconstructProgressiveImage() error {
 // reconstructBlock dequantizes, performs the inverse DCT and stores the Block
 // to the image.
 func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
-	qt := &d.quant[d.comp[compIndex].tq]
+	qt := &d.quant[d.comp[compIndex].Tq]
 	for zig := 0; zig < blockSize; zig++ {
 		b[Unzig[zig]] *= qt[zig]
 	}
@@ -518,7 +518,7 @@ func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 // Other than I/O errors, it is also an error if we encounter an {0xFF, M}
 // two-byte marker sequence where M is not 0x00, 0xFF or the expectedRST.
 //
-// This is similar to libjpeg's jdmarker.c's next_marker function.
+// This is similar to libjpeg's jdmarker.C's next_marker function.
 // https://github.com/libjpeg-turbo/libjpeg-turbo/blob/2dfe6c0fe9e18671105e94f7cbf044d4a1d157e6/jdmarker.c#L892-L935
 //
 // Precondition: d.tmp[:2] holds the next two bytes of JPEG-encoded input
@@ -537,7 +537,7 @@ func (d *decoder) findRST(expectedRST uint8) error {
 			} else if d.tmp[1] == 0xff {
 				i = 1
 			} else if d.tmp[1] != 0x00 {
-				// libjpeg's jdmarker.c's jpeg_resync_to_restart does something
+				// libjpeg's jdmarker.C's jpeg_resync_to_restart does something
 				// fancy here, treating RST markers within two (modulo 8) of
 				// expectedRST differently from RST markers that are 'more
 				// distant'. Until we see evidence that recovering from such

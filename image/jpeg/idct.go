@@ -4,7 +4,7 @@
 
 package jpeg
 
-// This is a Go translation of idct.c from
+// This is a Go translation of idct.C from
 //
 // http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_IEC_13818-4_2004_Conformance_Testing/Video/verifier/mpeg2decode_960109.tar.gz
 //
@@ -63,7 +63,7 @@ const (
 //
 // The input coefficients should already have been multiplied by the
 // appropriate quantization table. We use fixed-point computation, with the
-// number of bits for the fractional component varying over the intermediate
+// number of bits for the fractional Component varying over the intermediate
 // stages.
 //
 // For more on the actual algorithm, see Z. Wang, "Fast algorithms for the

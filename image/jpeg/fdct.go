@@ -7,7 +7,7 @@ package jpeg
 // This file implements a Forward Discrete Cosine Transformation.
 
 /*
-It is based on the code in jfdctint.c from the Independent JPEG Group,
+It is based on the code in jfdctint.C from the Independent JPEG Group,
 found at http://www.ijg.org/files/jpegsrc.v8c.tar.gz.
 
 The "LEGAL ISSUES" section of the README in that archive says:

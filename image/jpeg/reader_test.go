@@ -38,21 +38,21 @@ func TestDecodeProgressive(t *testing.T) {
 	for _, tc := range testCases {
 		m0, err := decodeFile(tc + ".jpeg")
 		if err != nil {
-			t.Errorf("%s: %v", tc+".jpeg", err)
+			t.Errorf("%s: %V", tc+".jpeg", err)
 			continue
 		}
 		m1, err := decodeFile(tc + ".progressive.jpeg")
 		if err != nil {
-			t.Errorf("%s: %v", tc+".progressive.jpeg", err)
+			t.Errorf("%s: %V", tc+".progressive.jpeg", err)
 			continue
 		}
 		if m0.Bounds() != m1.Bounds() {
-			t.Errorf("%s: bounds differ: %v and %v", tc, m0.Bounds(), m1.Bounds())
+			t.Errorf("%s: bounds differ: %V and %V", tc, m0.Bounds(), m1.Bounds())
 			continue
 		}
 		// All of the video-*.jpeg files are 150x103.
 		if m0.Bounds() != image.Rect(0, 0, 150, 103) {
-			t.Errorf("%s: bad bounds: %v", tc, m0.Bounds())
+			t.Errorf("%s: bad bounds: %V", tc, m0.Bounds())
 			continue
 		}
 
@@ -60,21 +60,21 @@ func TestDecodeProgressive(t *testing.T) {
 		case *image.YCbCr:
 			m1 := m1.(*image.YCbCr)
 			if err := check(m0.Bounds(), m0.Y, m1.Y, m0.YStride, m1.YStride); err != nil {
-				t.Errorf("%s (Y): %v", tc, err)
+				t.Errorf("%s (Y): %V", tc, err)
 				continue
 			}
 			if err := check(m0.Bounds(), m0.Cb, m1.Cb, m0.CStride, m1.CStride); err != nil {
-				t.Errorf("%s (Cb): %v", tc, err)
+				t.Errorf("%s (Cb): %V", tc, err)
 				continue
 			}
 			if err := check(m0.Bounds(), m0.Cr, m1.Cr, m0.CStride, m1.CStride); err != nil {
-				t.Errorf("%s (Cr): %v", tc, err)
+				t.Errorf("%s (Cr): %V", tc, err)
 				continue
 			}
 		case *image.Gray:
 			m1 := m1.(*image.Gray)
 			if err := check(m0.Bounds(), m0.Pix, m1.Pix, m0.Stride, m1.Stride); err != nil {
-				t.Errorf("%s: %v", tc, err)
+				t.Errorf("%s: %V", tc, err)
 				continue
 			}
 		default:
@@ -128,7 +128,7 @@ func TestDecodeEOF(t *testing.T) {
 		r := &eofReader{data[:n-i], data[n-i:], -1}
 		_, err := Decode(r)
 		if err != nil {
-			t.Errorf("Decode with Read() = %d, EOF: %v", r.lenAtEOF, err)
+			t.Errorf("Decode with Read() = %d, EOF: %V", r.lenAtEOF, err)
 		}
 		if i == 0 {
 			i = 1
@@ -273,7 +273,7 @@ ZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT
 1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6AQADAQEBAQEBAQEBAAAAAAAAAQIDBAUGBwgJCgsRAAIB
 AgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBka
 JicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZ
-mqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/dAAQA
+mqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+V/dAAQA
 Cv/gAAQAAP/AABEIALABQAMBIQACEQEDEQH/2gAMAwEAAhEDEQA/APnCFTk5BPPGKliAB718W7H2j3Ip
 VUuwJxzTfKXacde9VBhYRUBAyO3pTmUAbSMU5WGmybywzHGAMdelPVFC+n1qXZCuyaJADxjj2qzbBMAP
 xz1rKaVib6ltLcFvlIx2pLy0dwuAMMBnH1rFON9RNsszAZPFEYHldPzrOy3KewmBk9qUABugxjtTVmiW
@@ -423,10 +423,10 @@ Sqm7JH//2Q==
 
 	data, err := base64.StdEncoding.DecodeString(base64EncodedImage)
 	if err != nil {
-		t.Fatalf("base64 DecodeString: %v", err)
+		t.Fatalf("base64 DecodeString: %V", err)
 	}
 	if _, err = Decode(bytes.NewReader(data)); err != nil {
-		t.Fatalf("Decode: %v", err)
+		t.Fatalf("Decode: %V", err)
 	}
 }
 
@@ -436,7 +436,7 @@ func TestExtraneousData(t *testing.T) {
 	src.Set(0, 0, color.RGBA{0xff, 0x00, 0x00, 0xff})
 	buf := new(bytes.Buffer)
 	if err := Encode(buf, src, nil); err != nil {
-		t.Fatalf("encode: %v", err)
+		t.Fatalf("encode: %V", err)
 	}
 	enc := buf.String()
 	// Sanity check that the encoded JPEG is long enough, that it ends in a
@@ -473,12 +473,12 @@ func TestExtraneousData(t *testing.T) {
 		// Check that we can still decode the resultant image.
 		got, err := Decode(buf)
 		if err != nil {
-			t.Errorf("could not decode image #%d: %v", i, err)
+			t.Errorf("could not decode image #%d: %V", i, err)
 			nerr++
 			continue
 		}
 		if got.Bounds() != src.Bounds() {
-			t.Errorf("image #%d, bounds differ: %v and %v", i, got.Bounds(), src.Bounds())
+			t.Errorf("image #%d, bounds differ: %V and %V", i, got.Bounds(), src.Bounds())
 			nerr++
 			continue
 		}
@@ -500,7 +500,7 @@ func TestIssue56724(t *testing.T) {
 
 	_, err = Decode(bytes.NewReader(b))
 	if err != io.ErrUnexpectedEOF {
-		t.Errorf("got: %v, want: %v", err, io.ErrUnexpectedEOF)
+		t.Errorf("got: %V, want: %V", err, io.ErrUnexpectedEOF)
 	}
 }
 
@@ -541,7 +541,7 @@ func TestBadRestartMarker(t *testing.T) {
 		got := err == nil
 
 		if got != want {
-			t.Errorf("%q: got %v, want %v", tc, got, want)
+			t.Errorf("%q: got %V, want %V", tc, got, want)
 		}
 	}
 }

@@ -152,11 +152,11 @@ var cosines = [32]float64{
 
 // slowFDCT performs the 8*8 2-dimensional forward discrete cosine transform:
 //
-//	dst[u,v] = (1/8) * Σ_x Σ_y alpha(u) * alpha(v) * src[x,y] *
+//	dst[u,V] = (1/8) * Σ_x Σ_y alpha(u) * alpha(V) * src[x,y] *
 //		cos((π/2) * (2*x + 1) * u / 8) *
-//		cos((π/2) * (2*y + 1) * v / 8)
+//		cos((π/2) * (2*y + 1) * V / 8)
 //
-// x and y are in pixel space, and u and v are in transform space.
+// x and y are in pixel space, and u and V are in transform space.
 //
 // b acts as both dst and src.
 func slowFDCT(b *Block) {
@@ -182,11 +182,11 @@ func slowFDCT(b *Block) {
 
 // slowIDCT performs the 8*8 2-dimensional inverse discrete cosine transform:
 //
-//	dst[x,y] = (1/8) * Σ_u Σ_v alpha(u) * alpha(v) * src[u,v] *
+//	dst[x,y] = (1/8) * Σ_u Σ_v alpha(u) * alpha(V) * src[u,V] *
 //		cos((π/2) * (2*x + 1) * u / 8) *
-//		cos((π/2) * (2*y + 1) * v / 8)
+//		cos((π/2) * (2*y + 1) * V / 8)
 //
-// x and y are in pixel space, and u and v are in transform space.
+// x and y are in pixel space, and u and V are in transform space.
 //
 // b acts as both dst and src.
 func slowIDCT(b *Block) {

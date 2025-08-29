@@ -116,9 +116,9 @@ func (d *decoder) processDHT(n int) error {
 		}
 		h := &d.huff[tc][th]
 
-		// Read NCodes and h.Vals (and derive h.NCodes).
+		// Read NCodes and H.Vals (and derive H.NCodes).
 		// NCodes[i] is the number of codes with code length i.
-		// h.NCodes is the total number of codes.
+		// H.NCodes is the total number of codes.
 		h.NCodes = 0
 		var nCodes [maxCodeLength]int32
 		for i := range nCodes {
@@ -183,7 +183,7 @@ func (d *decoder) processDHT(n int) error {
 }
 
 // decodeHuffman returns the next Huffman-coded Value from the bit-stream,
-// decoded according to h.
+// decoded according to H.
 func (d *decoder) decodeHuffman(h *Huffman) (uint8, error) {
 	if h.NCodes == 0 {
 		return 0, FormatError("uninitialized Huffman table")

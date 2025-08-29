@@ -27,16 +27,16 @@ func (e UnsupportedError) Error() string { return "unsupported JPEG feature: " +
 var errUnsupportedSubsamplingRatio = UnsupportedError("luma/chroma subsampling ratio")
 
 // Component specification, specified in section B.2.2.
-type component struct {
-	h  int   // Horizontal sampling factor.
-	v  int   // Vertical sampling factor.
-	c  uint8 // Component identifier.
-	tq uint8 // Quantization table destination selector.
+type Component struct {
+	H  int   // Horizontal sampling factor.
+	V  int   // Vertical sampling factor.
+	C  uint8 // Component identifier.
+	Tq uint8 // Quantization table destination selector.
 }
 
 const (
-	dcTable = 0
-	acTable = 1
+	DcTable = 0
+	AcTable = 1
 	maxTc   = 1
 	maxTh   = 3
 	maxTq   = 3
@@ -102,11 +102,6 @@ type bits struct {
 	n int32  // the number of unread bits in a.
 }
 
-type BitStreamItem struct {
-	Bits int
-	Len  int
-}
-
 type Auxiliary struct {
 	DQTStart, DQTN, DQTLen int
 	SOFStart, SOFN, SOFLen int
@@ -120,6 +115,7 @@ type Auxiliary struct {
 	Huff            [maxTc + 1][maxTh + 1]Huffman
 	Img3            *image.YCbCr
 	ComponentBlocks [maxComponents][]Block // Component blocks in encoding order
+	Comp            [maxComponents]Component
 }
 
 type decoder struct {
@@ -161,7 +157,7 @@ type decoder struct {
 	adobeTransform      uint8
 	eobRun              uint16 // End-of-Band run, specified in section G.1.2.2.
 
-	comp       [maxComponents]component
+	comp       [maxComponents]Component
 	progCoeffs [maxComponents][]Block // Saved state between progressive-mode scans.
 	huff       [maxTc + 1][maxTh + 1]Huffman
 	quant      [maxTq + 1]Block // Quantization tables, in zig-zag order.
@@ -360,17 +356,17 @@ func (d *decoder) processSOF(n int) error {
 	}
 
 	for i := 0; i < d.nComp; i++ {
-		d.comp[i].c = d.tmp[6+3*i]
+		d.comp[i].C = d.tmp[6+3*i]
 		// Section B.2.2 states that "the Value of C_i shall be different from
 		// the values of C_1 through C_(i-1)".
 		for j := 0; j < i; j++ {
-			if d.comp[i].c == d.comp[j].c {
-				return FormatError("repeated component identifier")
+			if d.comp[i].C == d.comp[j].C {
+				return FormatError("repeated Component identifier")
 			}
 		}
 
-		d.comp[i].tq = d.tmp[8+3*i]
-		if d.comp[i].tq > maxTq {
+		d.comp[i].Tq = d.tmp[8+3*i]
+		if d.comp[i].Tq > maxTq {
 			return FormatError("bad Tq Value")
 		}
 
@@ -384,7 +380,7 @@ func (d *decoder) processSOF(n int) error {
 		}
 		switch d.nComp {
 		case 1:
-			// If a JPEG image has only one component, section A.2 says "this data
+			// If a JPEG image has only one Component, section A.2 says "this data
 			// is non-interleaved by definition" and section A.2.2 says "[in this
 			// case...] the order of data units within a scan shall be left-to-right
 			// and top-to-bottom... regardless of the values of H_1 and V_1". Section
@@ -392,41 +388,41 @@ func (d *decoder) processSOF(n int) error {
 			// one data unit". Similarly, section A.1.1 explains that it is the ratio
 			// of H_i to max_j(H_j) that matters, and similarly for V. For grayscale
 			// images, H_1 is the maximum H_j for all components j, so that ratio is
-			// always 1. The component's (h, v) is effectively always (1, 1): even if
-			// the nominal (h, v) is (2, 1), a 20x5 image is encoded in three 8x8
+			// always 1. The Component's (H, V) is effectively always (1, 1): even if
+			// the nominal (H, V) is (2, 1), a 20x5 image is encoded in three 8x8
 			// MCUs, not two 16x8 MCUs.
 			h, v = 1, 1
 
 		case 3:
 			// For YCbCr images, we only support 4:4:4, 4:4:0, 4:2:2, 4:2:0,
 			// 4:1:1 or 4:1:0 chroma subsampling ratios. This implies that the
-			// (h, v) values for the Y component are either (1, 1), (1, 2),
-			// (2, 1), (2, 2), (4, 1) or (4, 2), and the Y component's values
-			// must be a multiple of the Cb and Cr component's values. We also
+			// (H, V) values for the Y Component are either (1, 1), (1, 2),
+			// (2, 1), (2, 2), (4, 1) or (4, 2), and the Y Component's values
+			// must be a multiple of the Cb and Cr Component's values. We also
 			// assume that the two chroma components have the same subsampling
 			// ratio.
 			switch i {
 			case 0: // Y.
-				// We have already verified, above, that h and v are both
-				// either 1, 2 or 4, so invalid (h, v) combinations are those
-				// with v == 4.
+				// We have already verified, above, that H and V are both
+				// either 1, 2 or 4, so invalid (H, V) combinations are those
+				// with V == 4.
 				if v == 4 {
 					return errUnsupportedSubsamplingRatio
 				}
 			case 1: // Cb.
-				if d.comp[0].h%h != 0 || d.comp[0].v%v != 0 {
+				if d.comp[0].H%h != 0 || d.comp[0].V%v != 0 {
 					return errUnsupportedSubsamplingRatio
 				}
 			case 2: // Cr.
-				if d.comp[1].h != h || d.comp[1].v != v {
+				if d.comp[1].H != h || d.comp[1].V != v {
 					return errUnsupportedSubsamplingRatio
 				}
 			}
 
 		case 4:
-			// For 4-component images (either CMYK or YCbCrK), we only support two
+			// For 4-Component images (either CMYK or YCbCrK), we only support two
 			// hv vectors: [0x11 0x11 0x11 0x11] and [0x22 0x11 0x11 0x22].
-			// Theoretically, 4-component JPEG images could mix and match hv values
+			// Theoretically, 4-Component JPEG images could mix and match hv values
 			// but in practice, those two combinations are the only ones in use,
 			// and it simplifies the applyBlack code below if we can assume that:
 			//	- for CMYK, the C and K channels have full samples, and if the M
@@ -443,14 +439,14 @@ func (d *decoder) processSOF(n int) error {
 					return errUnsupportedSubsamplingRatio
 				}
 			case 3:
-				if d.comp[0].h != h || d.comp[0].v != v {
+				if d.comp[0].H != h || d.comp[0].V != v {
 					return errUnsupportedSubsamplingRatio
 				}
 			}
 		}
 
-		d.comp[i].h = h
-		d.comp[i].v = v
+		d.comp[i].H = h
+		d.comp[i].V = v
 	}
 	return nil
 }
@@ -488,8 +484,6 @@ loop:
 			for i := range d.quant[tq] {
 				d.quant[tq][i] = int32(d.tmp[i])
 			}
-			//copy(d.aux.Quant[tq][:], d.tmp[:blockSize])
-			//fmt.Printf("quant_0x: %x\n", d.tmp[:blockSize])
 
 		case 1:
 			if n < 2*blockSize {
@@ -502,9 +496,6 @@ loop:
 			for i := range d.quant[tq] {
 				d.quant[tq][i] = int32(d.tmp[2*i])<<8 | int32(d.tmp[2*i+1])
 			}
-			//copy(d.aux.Quant[tq%2][:], d.tmp[:blockSize])
-
-			//fmt.Printf("quant_2x: %x\n", d.tmp[:2*blockSize])
 		}
 	}
 	if n != 0 {
@@ -588,9 +579,9 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, *Auxiliary,
 		for d.tmp[0] != 0xff {
 			// Strictly speaking, this is a format error. However, libjpeg is
 			// liberal in what it accepts. As of version 9, next_marker in
-			// jdmarker.c treats this as a warning (JWRN_EXTRANEOUS_DATA) and
+			// jdmarker.C treats this as a warning (JWRN_EXTRANEOUS_DATA) and
 			// continues to decode the stream. Even before next_marker sees
-			// extraneous data, jpeg_fill_bit_buffer in jdhuff.c reads as many
+			// extraneous data, jpeg_fill_bit_buffer in jdhuff.C reads as many
 			// bytes as it can, possibly past the end of a scan's data. It
 			// effectively puts back any markers that it overscanned (e.g. an
 			// "\xff\xd9" EOI marker), but it does not put back non-marker data,
@@ -730,17 +721,17 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, *Auxiliary,
 // indicated by the APP14 (Adobe) metadata.
 //
 // Adobe CMYK JPEG images are inverted, where 255 means no ink instead of full
-// ink, so we apply "v = 255 - v" at various points. Note that a double
+// ink, so we apply "V = 255 - V" at various points. Note that a double
 // inversion is a no-op, so inversions might be implicit in the code below.
 func (d *decoder) applyBlack() (image.Image, error) {
 	if !d.adobeTransformValid {
-		return nil, UnsupportedError("unknown color model: 4-component JPEG doesn't have Adobe APP14 metadata")
+		return nil, UnsupportedError("unknown color model: 4-Component JPEG doesn't have Adobe APP14 metadata")
 	}
 
-	// If the 4-component JPEG image isn't explicitly marked as "Unknown (RGB
+	// If the 4-Component JPEG image isn't explicitly marked as "Unknown (RGB
 	// or CMYK)" as per
 	// https://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/JPEG.html#Adobe
-	// we assume that it is YCbCrK. This matches libjpeg's jdapimin.c.
+	// we assume that it is YCbCrK. This matches libjpeg's jdapimin.C.
 	if d.adobeTransform != adobeTransformUnknown {
 		// Convert the YCbCr part of the YCbCrK to RGB, invert the RGB to get
 		// CMY, and patch in the original K. The RGB to CMY inversion cancels
@@ -779,7 +770,7 @@ func (d *decoder) applyBlack() (image.Image, error) {
 		{d.blackPix, d.blackStride},
 	}
 	for t, translation := range translations {
-		subsample := d.comp[t].h != d.comp[0].h || d.comp[t].v != d.comp[0].v
+		subsample := d.comp[t].H != d.comp[0].H || d.comp[t].V != d.comp[0].V
 		for iBase, y := 0, bounds.Min.Y; y < bounds.Max.Y; iBase, y = iBase+img.Stride, y+1 {
 			sy := y - bounds.Min.Y
 			if subsample {
@@ -806,11 +797,11 @@ func (d *decoder) isRGB() bool {
 		// says that 0 means Unknown (and in practice RGB) and 1 means YCbCr.
 		return true
 	}
-	return d.comp[0].c == 'R' && d.comp[1].c == 'G' && d.comp[2].c == 'B'
+	return d.comp[0].C == 'R' && d.comp[1].C == 'G' && d.comp[2].C == 'B'
 }
 
 func (d *decoder) convertToRGB() (image.Image, error) {
-	cScale := d.comp[0].h / d.comp[1].h
+	cScale := d.comp[0].H / d.comp[1].H
 	bounds := d.img3.Bounds()
 	img := image.NewRGBA(bounds)
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {

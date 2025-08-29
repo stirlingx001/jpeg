@@ -151,7 +151,7 @@ func TestWriter(t *testing.T) {
 			continue
 		}
 		if m0.Bounds() != m1.Bounds() {
-			t.Errorf("%s, bounds differ: %v and %v", tc.filename, m0.Bounds(), m1.Bounds())
+			t.Errorf("%s, bounds differ: %V and %V", tc.filename, m0.Bounds(), m1.Bounds())
 			continue
 		}
 		// Compare the average delta to the tolerance level.
@@ -178,7 +178,7 @@ func TestWriteGrayscale(t *testing.T) {
 		t.Fatal(err)
 	}
 	if m0.Bounds() != m1.Bounds() {
-		t.Fatalf("bounds differ: %v and %v", m0.Bounds(), m1.Bounds())
+		t.Fatalf("bounds differ: %V and %V", m0.Bounds(), m1.Bounds())
 	}
 	if _, ok := m1.(*image.Gray); !ok {
 		t.Errorf("got %T, want *image.Gray", m1)
@@ -306,6 +306,6 @@ func TestWriteBlock(t *testing.T) {
 	dc := e.writeBlock(&b, 0, 63)
 	e.emit(0x7f, 7)
 	w.Flush()
-	t.Logf("dc: %v", dc)
+	t.Logf("dc: %V", dc)
 	t.Logf("encoded: %x", buffer.Bytes())
 }
