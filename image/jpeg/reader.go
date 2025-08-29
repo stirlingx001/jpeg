@@ -113,10 +113,13 @@ type Auxiliary struct {
 	DHTStart, DHTN, DHTLen int
 	SOSStart, SOSN, SOSLen int
 
-	NComp int
-	Quant [maxTq + 1]Block
-	Huff  [maxTc + 1][maxTh + 1]Huffman
-	Img3  *image.YCbCr
+	Width           int
+	Height          int
+	NComp           int
+	Quant           [maxTq + 1]Block
+	Huff            [maxTc + 1][maxTh + 1]Huffman
+	Img3            *image.YCbCr
+	ComponentBlocks [maxComponents][]Block // Component blocks in encoding order
 }
 
 type decoder struct {
@@ -564,6 +567,9 @@ func (d *decoder) processApp14Marker(n int) error {
 func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, *Auxiliary, error) {
 	d.r = r
 	d.aux = &Auxiliary{}
+	for i := 0; i < len(d.aux.ComponentBlocks); i++ {
+		d.aux.ComponentBlocks[i] = make([]Block, 0)
+	}
 
 	// Check for the Start Of Image marker.
 	if err := d.readFull(d.tmp[:2]); err != nil {
@@ -700,21 +706,20 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, *Auxiliary,
 		return d.img1, d.aux, nil
 	}
 	if d.img3 != nil {
+		d.aux.Height = d.height
+		d.aux.Width = d.width
+		d.aux.NComp = d.nComp
+		d.aux.Img3 = d.img3
+		d.aux.Huff = d.huff
+		d.aux.Quant = d.quant
+
 		if d.blackPix != nil {
 			image, err := d.applyBlack()
 			return image, d.aux, err
 		} else if d.isRGB() {
 			image, err := d.convertToRGB()
-			d.aux.NComp = d.nComp
-			d.aux.Img3 = d.img3
-			d.aux.Huff = d.huff
-			d.aux.Quant = d.quant
 			return image, d.aux, err
 		}
-		d.aux.NComp = d.nComp
-		d.aux.Img3 = d.img3
-		d.aux.Huff = d.huff
-		d.aux.Quant = d.quant
 		return d.img3, d.aux, nil
 	}
 	return nil, nil, FormatError("missing SOS marker")

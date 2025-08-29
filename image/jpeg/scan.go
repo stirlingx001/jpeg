@@ -492,6 +492,8 @@ func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 		}
 	}
 	// Level shift by +128, clip to [0, 255], and write to dst.
+
+	var tmp Block
 	for y := 0; y < 8; y++ {
 		y8 := y * 8
 		yStride := y * stride
@@ -505,8 +507,10 @@ func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 				c += 128
 			}
 			dst[yStride+x] = uint8(c)
+			tmp[y8+x] = c
 		}
 	}
+	d.aux.ComponentBlocks[compIndex] = append(d.aux.ComponentBlocks[compIndex], tmp)
 	return nil
 }
 
