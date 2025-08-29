@@ -87,12 +87,12 @@ const (
 	nHuffIndex
 )
 
-// huffmanSpec specifies a Huffman encoding.
-type huffmanSpec struct {
-	// count[i] is the number of codes of length i+1 bits.
-	count [16]byte
-	// value[i] is the decoded value of the i'th codeword.
-	value []byte
+// HuffmanSpec specifies a Huffman encoding.
+type HuffmanSpec struct {
+	// Count[i] is the number of codes of length i+1 bits.
+	Count [16]byte
+	// Value[i] is the decoded Value of the i'th codeword.
+	Value []byte
 }
 
 // theHuffmanSpec is the Huffman encoding specifications.
@@ -105,7 +105,7 @@ type huffmanSpec struct {
 // The AC tables have 162 decoded values: bytes that pack a 4-bit Run and a
 // 4-bit Size. There are 16 valid Runs and 10 valid Sizes, plus two special R|S
 // cases: 0|0 (meaning EOB) and F|0 (meaning ZRL).
-var theHuffmanSpec = [nHuffIndex]huffmanSpec{
+var theHuffmanSpec = [nHuffIndex]HuffmanSpec{
 	// Luminance DC.
 	{
 		[16]byte{0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0},
@@ -172,25 +172,25 @@ var theHuffmanSpec = [nHuffIndex]huffmanSpec{
 	},
 }
 
-// huffmanLUT is a compiled look-up table representation of a huffmanSpec.
-// Each value maps to a uint32 of which the 8 most significant bits hold the
+// HuffmanLUT is a compiled look-up table representation of a HuffmanSpec.
+// Each Value maps to a uint32 of which the 8 most significant bits hold the
 // codeword size in bits and the 24 least significant bits hold the codeword.
 // The maximum codeword size is 16 bits.
-type huffmanLUT []uint32
+type HuffmanLUT []uint32
 
-func (h *huffmanLUT) init(s huffmanSpec) {
+func (h *HuffmanLUT) init(s HuffmanSpec) {
 	maxValue := 0
-	for _, v := range s.value {
+	for _, v := range s.Value {
 		if int(v) > maxValue {
 			maxValue = int(v)
 		}
 	}
 	*h = make([]uint32, maxValue+1)
 	code, k := uint32(0), 0
-	for i := 0; i < len(s.count); i++ {
+	for i := 0; i < len(s.Count); i++ {
 		nBits := uint32(i+1) << 24
-		for j := uint8(0); j < s.count[i]; j++ {
-			(*h)[s.value[k]] = nBits | code
+		for j := uint8(0); j < s.Count[i]; j++ {
+			(*h)[s.Value[k]] = nBits | code
 			code++
 			k++
 		}
@@ -199,12 +199,18 @@ func (h *huffmanLUT) init(s huffmanSpec) {
 }
 
 // theHuffmanLUT are compiled representations of theHuffmanSpec.
-var theHuffmanLUT [4]huffmanLUT
+var theHuffmanLUT [4]HuffmanLUT
 
 func init() {
 	for i, s := range theHuffmanSpec {
 		theHuffmanLUT[i].init(s)
 	}
+}
+
+func NewHuffmanLUT(spec HuffmanSpec) HuffmanLUT {
+	var h HuffmanLUT
+	h.init(spec)
+	return h
 }
 
 // writer is a buffered writer.
@@ -267,13 +273,13 @@ func (e *encoder) emit(bits, nBits uint32) {
 	e.bits, e.nBits = bits, nBits
 }
 
-// emitHuff emits the given value with the given Huffman encoder.
+// emitHuff emits the given Value with the given Huffman encoder.
 func (e *encoder) emitHuff(h huffIndex, value int32) {
 	x := theHuffmanLUT[h][value]
 	e.emit(x&(1<<24-1), x>>24)
 }
 
-// emitHuffRLE emits a run of runLength copies of value encoded with the given
+// emitHuffRLE emits a run of runLength copies of Value encoded with the given
 // Huffman encoder.
 func (e *encoder) emitHuffRLE(h huffIndex, runLength, value int32) {
 	a, b := value, value
@@ -349,20 +355,20 @@ func (e *encoder) writeDHT(nComponent int) {
 		specs = specs[:2]
 	}
 	for _, s := range specs {
-		markerlen += 1 + 16 + len(s.value)
+		markerlen += 1 + 16 + len(s.Value)
 	}
 	e.writeMarkerHeader(dhtMarker, markerlen)
 	for i, s := range specs {
 		e.writeByte("\x00\x10\x01\x11"[i])
-		e.write(s.count[:])
-		e.write(s.value)
+		e.write(s.Count[:])
+		e.write(s.Value)
 	}
 }
 
-// writeBlock writes a block of pixel data using the given quantization table,
-// returning the post-quantized DC value of the DCT-transformed block. b is in
+// writeBlock writes a Block of pixel data using the given quantization table,
+// returning the post-quantized DC Value of the DCT-transformed Block. b is in
 // natural (not zig-zag) order.
-func (e *encoder) writeBlock(b *block, q quantIndex, prevDC int32) int32 {
+func (e *encoder) writeBlock(b *Block, q quantIndex, prevDC int32) int32 {
 	fdct(b)
 	// Emit the DC delta.
 	dc := Div(b[0], 8*int32(e.quant[q][0]))
@@ -388,9 +394,9 @@ func (e *encoder) writeBlock(b *block, q quantIndex, prevDC int32) int32 {
 	return dc
 }
 
-// toYCbCr converts the 8x8 region of m whose top-left corner is p to its
+// ToYCbCr converts the 8x8 region of m whose top-left corner is p to its
 // YCbCr values.
-func toYCbCr(m image.Image, p image.Point, yBlock, cbBlock, crBlock *block) {
+func ToYCbCr(m image.Image, p image.Point, yBlock, cbBlock, crBlock *Block) {
 	b := m.Bounds()
 	xmax := b.Max.X - 1
 	ymax := b.Max.Y - 1
@@ -406,7 +412,7 @@ func toYCbCr(m image.Image, p image.Point, yBlock, cbBlock, crBlock *block) {
 }
 
 // grayToY stores the 8x8 region of m whose top-left corner is p in yBlock.
-func grayToY(m *image.Gray, p image.Point, yBlock *block) {
+func grayToY(m *image.Gray, p image.Point, yBlock *Block) {
 	b := m.Bounds()
 	xmax := b.Max.X - 1
 	ymax := b.Max.Y - 1
@@ -419,12 +425,8 @@ func grayToY(m *image.Gray, p image.Point, yBlock *block) {
 	}
 }
 
-func RgbaToYCbCr(m *image.RGBA, p image.Point, yBlock, cbBlock, crBlock *block) {
-	rgbaToYCbCr(m, p, yBlock, cbBlock, crBlock)
-}
-
-// rgbaToYCbCr is a specialized version of toYCbCr for image.RGBA images.
-func rgbaToYCbCr(m *image.RGBA, p image.Point, yBlock, cbBlock, crBlock *block) {
+// RgbaToYCbCr is a specialized version of ToYCbCr for image.RGBA images.
+func RgbaToYCbCr(m *image.RGBA, p image.Point, yBlock, cbBlock, crBlock *Block) {
 	b := m.Bounds()
 	xmax := b.Max.X - 1
 	ymax := b.Max.Y - 1
@@ -448,8 +450,8 @@ func rgbaToYCbCr(m *image.RGBA, p image.Point, yBlock, cbBlock, crBlock *block) 
 	}
 }
 
-// yCbCrToYCbCr is a specialized version of toYCbCr for image.YCbCr images.
-func yCbCrToYCbCr(m *image.YCbCr, p image.Point, yBlock, cbBlock, crBlock *block) {
+// YCbCrToYCbCr is a specialized version of ToYCbCr for image.YCbCr images.
+func YCbCrToYCbCr(m *image.YCbCr, p image.Point, yBlock, cbBlock, crBlock *Block) {
 	b := m.Bounds()
 	xmax := b.Max.X - 1
 	ymax := b.Max.Y - 1
@@ -472,9 +474,9 @@ func yCbCrToYCbCr(m *image.YCbCr, p image.Point, yBlock, cbBlock, crBlock *block
 	}
 }
 
-// scale scales the 16x16 region represented by the 4 src blocks to the 8x8
-// dst block.
-func scale(dst *block, src *[4]block) {
+// Scale scales the 16x16 region represented by the 4 src blocks to the 8x8
+// dst Block.
+func Scale(dst *Block, src *[4]Block) {
 	for i := 0; i < 4; i++ {
 		dstOff := (i&2)<<4 | (i&1)<<2
 		for y := 0; y < 4; y++ {
@@ -523,8 +525,8 @@ func (e *encoder) writeSOS(m image.Image) {
 	var (
 		// Scratch buffers to hold the YCbCr values.
 		// The blocks are in natural (not zig-zag) order.
-		b      block
-		cb, cr [4]block
+		b      Block
+		cb, cr [4]Block
 		// DC components are delta-encoded.
 		prevDCY, prevDCCb, prevDCCr int32
 	)
@@ -549,17 +551,17 @@ func (e *encoder) writeSOS(m image.Image) {
 					yOff := (i & 2) * 4
 					p := image.Pt(x+xOff, y+yOff)
 					if rgba != nil {
-						rgbaToYCbCr(rgba, p, &b, &cb[i], &cr[i])
+						RgbaToYCbCr(rgba, p, &b, &cb[i], &cr[i])
 					} else if ycbcr != nil {
-						yCbCrToYCbCr(ycbcr, p, &b, &cb[i], &cr[i])
+						YCbCrToYCbCr(ycbcr, p, &b, &cb[i], &cr[i])
 					} else {
-						toYCbCr(m, p, &b, &cb[i], &cr[i])
+						ToYCbCr(m, p, &b, &cb[i], &cr[i])
 					}
 					prevDCY = e.writeBlock(&b, 0, prevDCY)
 				}
-				scale(&b, &cb)
+				Scale(&b, &cb)
 				prevDCCb = e.writeBlock(&b, 1, prevDCCb)
-				scale(&b, &cr)
+				Scale(&b, &cr)
 				prevDCCr = e.writeBlock(&b, 1, prevDCCr)
 			}
 		}

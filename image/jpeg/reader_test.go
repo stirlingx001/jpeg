@@ -146,16 +146,16 @@ func check(bounds image.Rectangle, pix0, pix1 []byte, stride0, stride1 int) erro
 	if stride1 <= 0 || stride1%8 != 0 {
 		return fmt.Errorf("bad stride %d", stride1)
 	}
-	// Compare the two pix data, one 8x8 block at a time.
+	// Compare the two pix data, one 8x8 Block at a time.
 	for y := 0; y < len(pix0)/stride0 && y < len(pix1)/stride1; y += 8 {
 		for x := 0; x < stride0 && x < stride1; x += 8 {
 			if x >= bounds.Max.X || y >= bounds.Max.Y {
-				// We don't care if the two pix data differ if the 8x8 block is
+				// We don't care if the two pix data differ if the 8x8 Block is
 				// entirely outside of the image's bounds. For example, this can
 				// occur with a 4:2:0 chroma subsampling and a 1x1 image. Baseline
 				// decoding works on the one 16x16 MCU as a whole; progressive
 				// decoding's first pass works on that 16x16 MCU as a whole but
-				// refinement passes only process one 8x8 block within the MCU.
+				// refinement passes only process one 8x8 Block within the MCU.
 				continue
 			}
 

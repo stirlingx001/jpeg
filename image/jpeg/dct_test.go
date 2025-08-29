@@ -12,9 +12,9 @@ import (
 	"testing"
 )
 
-func benchmarkDCT(b *testing.B, f func(*block)) {
+func benchmarkDCT(b *testing.B, f func(*Block)) {
 	b.StopTimer()
-	blocks := make([]block, 0, b.N*len(testBlocks))
+	blocks := make([]Block, 0, b.N*len(testBlocks))
 	for i := 0; i < b.N; i++ {
 		blocks = append(blocks, testBlocks[:]...)
 	}
@@ -33,13 +33,13 @@ func BenchmarkIDCT(b *testing.B) {
 }
 
 func TestDCT(t *testing.T) {
-	blocks := make([]block, len(testBlocks))
+	blocks := make([]Block, len(testBlocks))
 	copy(blocks, testBlocks[:])
 
 	// Append some randomly generated blocks of varying sparseness.
 	r := rand.New(rand.NewSource(123))
 	for i := 0; i < 100; i++ {
-		b := block{}
+		b := Block{}
 		n := r.Int() % 64
 		for j := 0; j < n; j++ {
 			b[r.Int()%len(b)] = r.Int31() % 256
@@ -47,7 +47,7 @@ func TestDCT(t *testing.T) {
 		blocks = append(blocks, b)
 	}
 
-	// Check that the FDCT and IDCT functions are inverses, after a scale and
+	// Check that the FDCT and IDCT functions are inverses, after a Scale and
 	// level shift. Scaling reduces the rounding errors in the conversion from
 	// floats to ints.
 	for i, b := range blocks {
@@ -66,7 +66,7 @@ func TestDCT(t *testing.T) {
 	}
 
 	// Check that the optimized and slow FDCT implementations agree.
-	// The fdct function already does a scale and level shift.
+	// The fdct function already does a Scale and level shift.
 	for i, b := range blocks {
 		got, want := b, b
 		fdct(&got)
@@ -94,7 +94,7 @@ func TestDCT(t *testing.T) {
 // more. That tolerance is because there isn't a single definitive decoding of
 // a given JPEG image, even before the YCbCr to RGB conversion; implementations
 // can have different IDCT rounding errors.
-func differ(b0, b1 *block) bool {
+func differ(b0, b1 *Block) bool {
 	for i := range b0 {
 		delta := b0[i] - b1[i]
 		if delta < -2 || +2 < delta {
@@ -159,7 +159,7 @@ var cosines = [32]float64{
 // x and y are in pixel space, and u and v are in transform space.
 //
 // b acts as both dst and src.
-func slowFDCT(b *block) {
+func slowFDCT(b *Block) {
 	var dst [blockSize]float64
 	for v := 0; v < 8; v++ {
 		for u := 0; u < 8; u++ {
@@ -189,7 +189,7 @@ func slowFDCT(b *block) {
 // x and y are in pixel space, and u and v are in transform space.
 //
 // b acts as both dst and src.
-func slowIDCT(b *block) {
+func slowIDCT(b *Block) {
 	var dst [blockSize]float64
 	for y := 0; y < 8; y++ {
 		for x := 0; x < 8; x++ {
@@ -210,7 +210,7 @@ func slowIDCT(b *block) {
 	}
 }
 
-func (b *block) String() string {
+func (b *Block) String() string {
 	s := &strings.Builder{}
 	fmt.Fprintf(s, "{\n")
 	for y := 0; y < 8; y++ {
@@ -225,7 +225,7 @@ func (b *block) String() string {
 }
 
 // testBlocks are the first 10 pre-IDCT blocks from ../testdata/video-001.jpeg.
-var testBlocks = [10]block{
+var testBlocks = [10]Block{
 	{
 		0x7f, 0xf6, 0x01, 0x07, 0xff, 0x00, 0x00, 0x00,
 		0xf5, 0x01, 0xfa, 0x01, 0xfe, 0x00, 0x01, 0x00,

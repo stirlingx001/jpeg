@@ -85,7 +85,7 @@ func (d *decoder) processSOS(n int) error {
 			return FormatError("unknown component selector")
 		}
 		scan[i].compIndex = uint8(compIndex)
-		// Section B.2.3 states that "the value of Cs_j shall be different from
+		// Section B.2.3 states that "the Value of Cs_j shall be different from
 		// the values of Cs_1 through Cs_(j-1)". Since we have previously
 		// verified that a frame's component identifiers (C_i values in section
 		// B.2.2) are unique, it suffices to check that the implicit indexes
@@ -100,11 +100,11 @@ func (d *decoder) processSOS(n int) error {
 		// The baseline t <= 1 restriction is specified in table B.3.
 		scan[i].td = d.tmp[2+2*i] >> 4
 		if t := scan[i].td; t > maxTh || (d.baseline && t > 1) {
-			return FormatError("bad Td value")
+			return FormatError("bad Td Value")
 		}
 		scan[i].ta = d.tmp[2+2*i] & 0x0f
 		if t := scan[i].ta; t > maxTh || (d.baseline && t > 1) {
-			return FormatError("bad Ta value")
+			return FormatError("bad Ta Value")
 		}
 	}
 	// Section B.2.3 states that if there is more than one component then the
@@ -119,7 +119,7 @@ func (d *decoder) processSOS(n int) error {
 	//
 	// For progressive JPEGs, these are the two more-or-less independent
 	// aspects of progression. Spectral selection progression is when not
-	// all of a block's 64 DCT coefficients are transmitted in one pass.
+	// all of a Block's 64 DCT coefficients are transmitted in one pass.
 	// For example, three passes could transmit coefficient 0 (the DC
 	// component), coefficients 1-5, and coefficients 6-63, in zig-zag
 	// order. Successive approximation is when not all of the bits of a
@@ -158,7 +158,7 @@ func (d *decoder) processSOS(n int) error {
 		for i := 0; i < nComp; i++ {
 			compIndex := scan[i].compIndex
 			if d.progCoeffs[compIndex] == nil {
-				d.progCoeffs[compIndex] = make([]block, mxx*myy*d.comp[compIndex].h*d.comp[compIndex].v)
+				d.progCoeffs[compIndex] = make([]Block, mxx*myy*d.comp[compIndex].h*d.comp[compIndex].v)
 			}
 		}
 	}
@@ -167,10 +167,10 @@ func (d *decoder) processSOS(n int) error {
 	mcu, expectedRST := 0, uint8(rst0Marker)
 	var (
 		// b is the decoded coefficients, in natural (not zig-zag) order.
-		b  block
+		b  Block
 		dc [maxComponents]int32
-		// bx and by are the location of the current block, in units of 8x8
-		// blocks: the third block in the first row has (bx, by) = (2, 0).
+		// bx and by are the location of the current Block, in units of 8x8
+		// blocks: the third Block in the first row has (bx, by) = (2, 0).
 		bx, by     int
 		blockCount int
 	)
@@ -223,7 +223,7 @@ func (d *decoder) processSOS(n int) error {
 					if d.progressive {
 						b = d.progCoeffs[compIndex][by*mxx*hi+bx]
 					} else {
-						b = block{}
+						b = Block{}
 					}
 
 					if ah != 0 {
@@ -299,7 +299,7 @@ func (d *decoder) processSOS(n int) error {
 						// buffers (the whole point of progressive encoding), but in Go, the jpeg.Decode
 						// function does not return until the entire image is decoded, so we "continue"
 						// here to avoid wasted computation. Instead, reconstructBlock is called on each
-						// accumulated block by the reconstructProgressiveImage method after all of the
+						// accumulated Block by the reconstructProgressiveImage method after all of the
 						// SOS markers are processed.
 						continue
 					}
@@ -337,9 +337,9 @@ func (d *decoder) processSOS(n int) error {
 	return nil
 }
 
-// refine decodes a successive approximation refinement block, as specified in
+// refine decodes a successive approximation refinement Block, as specified in
 // section G.1.2.
-func (d *decoder) refine(b *block, h *Huffman, zigStart, zigEnd, delta int32) error {
+func (d *decoder) refine(b *Block, h *Huffman, zigStart, zigEnd, delta int32) error {
 	// Refining a DC component is trivial.
 	if zigStart == 0 {
 		if zigEnd != 0 {
@@ -417,7 +417,7 @@ func (d *decoder) refine(b *block, h *Huffman, zigStart, zigEnd, delta int32) er
 
 // refineNonZeroes refines non-zero entries of b in zig-zag order. If nz >= 0,
 // the first nz zero entries are skipped over.
-func (d *decoder) refineNonZeroes(b *block, zig, zigEnd, nz, delta int32) (int32, error) {
+func (d *decoder) refineNonZeroes(b *Block, zig, zigEnd, nz, delta int32) (int32, error) {
 	for ; zig <= zigEnd; zig++ {
 		u := Unzig[zig]
 		if b[u] == 0 {
@@ -466,9 +466,9 @@ func (d *decoder) reconstructProgressiveImage() error {
 	return nil
 }
 
-// reconstructBlock dequantizes, performs the inverse DCT and stores the block
+// reconstructBlock dequantizes, performs the inverse DCT and stores the Block
 // to the image.
-func (d *decoder) reconstructBlock(b *block, bx, by, compIndex int) error {
+func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 	qt := &d.quant[d.comp[compIndex].tq]
 	for zig := 0; zig < blockSize; zig++ {
 		b[Unzig[zig]] *= qt[zig]

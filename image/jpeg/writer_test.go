@@ -299,7 +299,7 @@ func TestWriteBlock(t *testing.T) {
 		e.quant[0][i] = 3
 		e.quant[1][i] = 3
 	}
-	var b block
+	var b Block
 	for i := 0; i < 64; i++ {
 		b[i] = 200
 	}

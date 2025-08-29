@@ -37,9 +37,9 @@ package jpeg
  *
  */
 
-const blockSize = 64 // A DCT block is 8x8.
+const blockSize = 64 // A DCT Block is 8x8.
 
-type block [blockSize]int32
+type Block [blockSize]int32
 
 const (
 	w1 = 2841 // 2048*sqrt(2)*cos(1*pi/16)
@@ -69,7 +69,7 @@ const (
 // For more on the actual algorithm, see Z. Wang, "Fast algorithms for the
 // discrete W transform and for the discrete Fourier transform", IEEE Trans. on
 // ASSP, Vol. ASSP- 32, pp. 803-816, Aug. 1984.
-func idct(src *block) {
+func idct(src *Block) {
 	// Horizontal 1-D IDCT.
 	for y := 0; y < 8; y++ {
 		y8 := y * 8

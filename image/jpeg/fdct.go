@@ -82,15 +82,15 @@ const (
 )
 
 func FDct(b [64]int32) [64]int32 {
-	var newBlock block
+	var newBlock Block
 	copy(newBlock[:], b[:])
 	fdct(&newBlock)
 	return newBlock
 }
 
-// fdct performs a forward DCT on an 8x8 block of coefficients, including a
+// fdct performs a forward DCT on an 8x8 Block of coefficients, including a
 // level shift.
-func fdct(b *block) {
+func fdct(b *Block) {
 	// Pass 1: process rows.
 	for y := 0; y < 8; y++ {
 		y8 := y * 8

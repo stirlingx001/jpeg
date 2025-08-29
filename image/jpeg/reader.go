@@ -74,7 +74,7 @@ const (
 
 // Unzig maps from the zig-zag ordering to the natural ordering. For example,
 // Unzig[3] is the column and row of the fourth element in zig-zag order. The
-// value is 16, which means first column (16%8 == 0) and third row (16/8 == 2).
+// Value is 16, which means first column (16%8 == 0) and third row (16/8 == 2).
 var Unzig = [blockSize]int{
 	0, 1, 8, 16, 9, 2, 3, 10,
 	17, 24, 32, 25, 18, 11, 4, 5,
@@ -114,7 +114,7 @@ type Auxiliary struct {
 	SOSStart, SOSN, SOSLen int
 
 	NComp int
-	Quant [maxTq + 1]block
+	Quant [maxTq + 1]Block
 	Huff  [maxTc + 1][maxTh + 1]Huffman
 	Img3  *image.YCbCr
 }
@@ -159,9 +159,9 @@ type decoder struct {
 	eobRun              uint16 // End-of-Band run, specified in section G.1.2.2.
 
 	comp       [maxComponents]component
-	progCoeffs [maxComponents][]block // Saved state between progressive-mode scans.
+	progCoeffs [maxComponents][]Block // Saved state between progressive-mode scans.
 	huff       [maxTc + 1][maxTh + 1]Huffman
-	quant      [maxTq + 1]block // Quantization tables, in zig-zag order.
+	quant      [maxTq + 1]Block // Quantization tables, in zig-zag order.
 	tmp        [2 * blockSize]byte
 
 	aux *Auxiliary
@@ -358,7 +358,7 @@ func (d *decoder) processSOF(n int) error {
 
 	for i := 0; i < d.nComp; i++ {
 		d.comp[i].c = d.tmp[6+3*i]
-		// Section B.2.2 states that "the value of C_i shall be different from
+		// Section B.2.2 states that "the Value of C_i shall be different from
 		// the values of C_1 through C_(i-1)".
 		for j := 0; j < i; j++ {
 			if d.comp[i].c == d.comp[j].c {
@@ -368,7 +368,7 @@ func (d *decoder) processSOF(n int) error {
 
 		d.comp[i].tq = d.tmp[8+3*i]
 		if d.comp[i].tq > maxTq {
-			return FormatError("bad Tq value")
+			return FormatError("bad Tq Value")
 		}
 
 		hv := d.tmp[7+3*i]
@@ -469,11 +469,11 @@ loop:
 		}
 		tq := x & 0x0f
 		if tq > maxTq {
-			return FormatError("bad Tq value")
+			return FormatError("bad Tq Value")
 		}
 		switch x >> 4 {
 		default:
-			return FormatError("bad Pq value")
+			return FormatError("bad Pq Value")
 		case 0:
 			if n < blockSize {
 				break loop
@@ -632,7 +632,7 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, *Auxiliary,
 			continue
 		}
 
-		// Read the 16-bit length of the segment. The value includes the 2 bytes for the
+		// Read the 16-bit length of the segment. The Value includes the 2 bytes for the
 		// length itself, so we subtract 2 to get the number of remaining bytes.
 		if err = d.readFull(d.tmp[:2]); err != nil {
 			return nil, nil, err

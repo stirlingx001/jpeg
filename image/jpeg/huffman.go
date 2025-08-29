@@ -20,14 +20,14 @@ const lutSize = 8
 // Huffman is a Huffman decoder, specified in section C.
 type Huffman struct {
 	// length is the number of codes in the tree.
-	nCodes int32
+	NCodes int32
 	// Lut is the look-up table for the next lutSize bits in the bit-stream.
-	// The high 8 bits of the uint16 are the encoded value. The low 8 bits
-	// are 1 plus the code length, or 0 if the value is too large to fit in
+	// The high 8 bits of the uint16 are the encoded Value. The low 8 bits
+	// are 1 plus the code length, or 0 if the Value is too large to fit in
 	// lutSize bits.
 	Lut [1 << lutSize]uint16
 
-	// count[i] is the number of codes of length i+1 bits.
+	// Count[i] is the number of codes of length i+1 bits.
 	Count [16]uint8
 
 	// Vals are the decoded values, sorted by their encoding.
@@ -107,37 +107,37 @@ func (d *decoder) processDHT(n int) error {
 		}
 		tc := d.tmp[0] >> 4
 		if tc > maxTc {
-			return FormatError("bad Tc value")
+			return FormatError("bad Tc Value")
 		}
 		th := d.tmp[0] & 0x0f
 		// The baseline th <= 1 restriction is specified in table B.5.
 		if th > maxTh || (d.baseline && th > 1) {
-			return FormatError("bad Th value")
+			return FormatError("bad Th Value")
 		}
 		h := &d.huff[tc][th]
 
-		// Read nCodes and h.Vals (and derive h.nCodes).
-		// nCodes[i] is the number of codes with code length i.
-		// h.nCodes is the total number of codes.
-		h.nCodes = 0
+		// Read NCodes and h.Vals (and derive h.NCodes).
+		// NCodes[i] is the number of codes with code length i.
+		// h.NCodes is the total number of codes.
+		h.NCodes = 0
 		var nCodes [maxCodeLength]int32
 		for i := range nCodes {
 			nCodes[i] = int32(d.tmp[i+1])
-			h.nCodes += nCodes[i]
+			h.NCodes += nCodes[i]
 		}
 		copy(h.Count[:], d.tmp[1:17])
 
-		if h.nCodes == 0 {
+		if h.NCodes == 0 {
 			return FormatError("Huffman table has zero length")
 		}
-		if h.nCodes > maxNCodes {
+		if h.NCodes > maxNCodes {
 			return FormatError("Huffman table has excessive length")
 		}
-		n -= int(h.nCodes) + 17
+		n -= int(h.NCodes) + 17
 		if n < 0 {
 			return FormatError("DHT has wrong length")
 		}
-		if err := d.readFull(h.Vals[:h.nCodes]); err != nil {
+		if err := d.readFull(h.Vals[:h.NCodes]); err != nil {
 			return err
 		}
 
@@ -150,7 +150,7 @@ func (d *decoder) processDHT(n int) error {
 				// The codeLength is 1+i, so shift code by 8-(1+i) to
 				// calculate the high bits for every 8-bit sequence
 				// whose codeLength's high bits matches code.
-				// The high 8 bits of lutValue are the encoded value.
+				// The high 8 bits of lutValue are the encoded Value.
 				// The low 8 bits are 1 plus the codeLength.
 				base := uint8(code << (7 - i))
 				lutValue := uint16(h.Vals[x])<<8 | uint16(2+i)
@@ -182,10 +182,10 @@ func (d *decoder) processDHT(n int) error {
 	return nil
 }
 
-// decodeHuffman returns the next Huffman-coded value from the bit-stream,
+// decodeHuffman returns the next Huffman-coded Value from the bit-stream,
 // decoded according to h.
 func (d *decoder) decodeHuffman(h *Huffman) (uint8, error) {
-	if h.nCodes == 0 {
+	if h.NCodes == 0 {
 		return 0, FormatError("uninitialized Huffman table")
 	}
 
