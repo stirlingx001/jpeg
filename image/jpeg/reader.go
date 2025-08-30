@@ -710,6 +710,7 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, *Auxiliary,
 		d.aux.Img3 = d.img3
 		d.aux.Huff = d.huff
 		d.aux.Quant = d.quant
+		d.aux.Comp = d.comp
 
 		if d.blackPix != nil {
 			image, err := d.applyBlack()
