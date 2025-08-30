@@ -102,6 +102,12 @@ type bits struct {
 	n int32  // the number of unread bits in a.
 }
 
+type Scan struct {
+	CompIndex uint8
+	Td        uint8 // DC table selector.
+	Ta        uint8 // AC table selector.
+}
+
 type Auxiliary struct {
 	DQTStart, DQTN, DQTLen int
 	SOFStart, SOFN, SOFLen int
@@ -111,6 +117,7 @@ type Auxiliary struct {
 	Width           int
 	Height          int
 	NComp           int
+	Scans           [maxComponents]Scan
 	Quant           [maxTq + 1]Block
 	Huff            [maxTc + 1][maxTh + 1]Huffman
 	Img3            *image.YCbCr

@@ -67,11 +67,7 @@ func (d *decoder) processSOS(n int) error {
 	if n != 4+2*nComp {
 		return FormatError("SOS length inconsistent with number of components")
 	}
-	var scan [maxComponents]struct {
-		compIndex uint8
-		td        uint8 // DC table selector.
-		ta        uint8 // AC table selector.
-	}
+	var scan [maxComponents]Scan
 	totalHV := 0
 	for i := 0; i < nComp; i++ {
 		cs := d.tmp[1+2*i] // Component selector.
@@ -84,29 +80,30 @@ func (d *decoder) processSOS(n int) error {
 		if compIndex < 0 {
 			return FormatError("unknown Component selector")
 		}
-		scan[i].compIndex = uint8(compIndex)
+		scan[i].CompIndex = uint8(compIndex)
 		// Section B.2.3 states that "the Value of Cs_j shall be different from
 		// the values of Cs_1 through Cs_(j-1)". Since we have previously
 		// verified that a frame's Component identifiers (C_i values in section
 		// B.2.2) are unique, it suffices to check that the implicit indexes
 		// into d.comp are unique.
 		for j := 0; j < i; j++ {
-			if scan[i].compIndex == scan[j].compIndex {
+			if scan[i].CompIndex == scan[j].CompIndex {
 				return FormatError("repeated Component selector")
 			}
 		}
 		totalHV += d.comp[compIndex].H * d.comp[compIndex].V
 
 		// The baseline t <= 1 restriction is specified in table B.3.
-		scan[i].td = d.tmp[2+2*i] >> 4
-		if t := scan[i].td; t > maxTh || (d.baseline && t > 1) {
+		scan[i].Td = d.tmp[2+2*i] >> 4
+		if t := scan[i].Td; t > maxTh || (d.baseline && t > 1) {
 			return FormatError("bad Td Value")
 		}
-		scan[i].ta = d.tmp[2+2*i] & 0x0f
-		if t := scan[i].ta; t > maxTh || (d.baseline && t > 1) {
+		scan[i].Ta = d.tmp[2+2*i] & 0x0f
+		if t := scan[i].Ta; t > maxTh || (d.baseline && t > 1) {
 			return FormatError("bad Ta Value")
 		}
 	}
+	d.aux.Scans = scan
 	// Section B.2.3 states that if there is more than one Component then the
 	// total H*V values in a scan must be <= 10.
 	if d.nComp > 1 && totalHV > 10 {
@@ -156,7 +153,7 @@ func (d *decoder) processSOS(n int) error {
 	}
 	if d.progressive {
 		for i := 0; i < nComp; i++ {
-			compIndex := scan[i].compIndex
+			compIndex := scan[i].CompIndex
 			if d.progCoeffs[compIndex] == nil {
 				d.progCoeffs[compIndex] = make([]Block, mxx*myy*d.comp[compIndex].H*d.comp[compIndex].V)
 			}
@@ -177,7 +174,7 @@ func (d *decoder) processSOS(n int) error {
 	for my := 0; my < myy; my++ {
 		for mx := 0; mx < mxx; mx++ {
 			for i := 0; i < nComp; i++ {
-				compIndex := scan[i].compIndex
+				compIndex := scan[i].CompIndex
 				hi := d.comp[compIndex].H
 				vi := d.comp[compIndex].V
 				for j := 0; j < hi*vi; j++ {
@@ -227,7 +224,7 @@ func (d *decoder) processSOS(n int) error {
 					}
 
 					if ah != 0 {
-						if err := d.refine(&b, &d.huff[AcTable][scan[i].ta], zigStart, zigEnd, 1<<al); err != nil {
+						if err := d.refine(&b, &d.huff[AcTable][scan[i].Ta], zigStart, zigEnd, 1<<al); err != nil {
 							return err
 						}
 					} else {
@@ -235,7 +232,7 @@ func (d *decoder) processSOS(n int) error {
 						if zig == 0 {
 							zig++
 							// Decode the DC coefficient, as specified in section F.2.2.1.
-							value, err := d.decodeHuffman(&d.huff[DcTable][scan[i].td])
+							value, err := d.decodeHuffman(&d.huff[DcTable][scan[i].Td])
 							if err != nil {
 								return err
 							}
@@ -254,7 +251,7 @@ func (d *decoder) processSOS(n int) error {
 							d.eobRun--
 						} else {
 							// Decode the AC coefficients, as specified in section F.2.2.2.
-							huff := &d.huff[AcTable][scan[i].ta]
+							huff := &d.huff[AcTable][scan[i].Ta]
 							for ; zig <= zigEnd; zig++ {
 								value, err := d.decodeHuffman(huff)
 								if err != nil {
