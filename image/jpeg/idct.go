@@ -59,6 +59,13 @@ const (
 	r2 = 181 // 256/sqrt(2)
 )
 
+func IDct(src Block) Block {
+	var dst Block
+	copy(dst[:], src[:])
+	idct(&dst)
+	return dst
+}
+
 // idct performs a 2-D Inverse Discrete Cosine Transformation.
 //
 // The input coefficients should already have been multiplied by the
