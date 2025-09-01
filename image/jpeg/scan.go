@@ -321,10 +321,14 @@ func (d *decoder) processSOS(n int) error {
 						// inverse DCT, to save early stages of a progressive image to the *image.YCbCr
 						// buffers (the whole point of progressive encoding), but in Go, the jpeg.Decode
 						// function does not return until the entire image is decoded, so we "continue"
-						// here to avoid wasted computation. Instead, reconstructBlock is called on each
+						// here to avoid waxsted computation. Instead, reconstructBlock is called on each
 						// accumulated Block by the reconstructProgressiveImage method after all of the
 						// SOS markers are processed.
 						continue
+					}
+					if d.aux.BitstreamItems[compIndex] == nil {
+						d.aux.BitstreamItems[compIndex] = make([][]BitstreamItem, 0)
+						d.aux.BitstreamItems[compIndex] = append(d.aux.BitstreamItems[compIndex], bitstream)
 					}
 					if err := d.reconstructBlock(&b, bx, by, int(compIndex)); err != nil {
 						return err

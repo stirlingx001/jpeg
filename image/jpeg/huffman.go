@@ -204,13 +204,13 @@ func (d *decoder) decodeHuffman(h *Huffman) (uint8, uint16, uint8, error) {
 			goto slowPath
 		}
 	}
-	if v := h.Lut[(d.bits.a>>uint32(d.bits.n-lutSize))&0xff]; v != 0 {
-		code := (d.bits.a >> uint32(d.bits.n-lutSize)) & 0xff
-		n := (v & 0xff) - 1
-		d.bits.n -= int32(n)
-		d.bits.m >>= n
-		return uint8(v >> 8), uint16(code), uint8(n), nil
-	}
+	//if v := h.Lut[(d.bits.a>>uint32(d.bits.n-lutSize))&0xff]; v != 0 {
+	//	code := (d.bits.a >> uint32(d.bits.n-lutSize)) & 0xff
+	//	n := (v & 0xff) - 1
+	//	d.bits.n -= int32(n)
+	//	d.bits.m >>= n
+	//	return uint8(v >> 8), uint16(code), uint8(n), nil
+	//}
 
 slowPath:
 	for i, code := 0, int32(0); i < maxCodeLength; i++ {
