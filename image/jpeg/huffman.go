@@ -32,14 +32,14 @@ type Huffman struct {
 
 	// Vals are the decoded values, sorted by their encoding.
 	Vals [maxNCodes]uint8
-	// minCodes[i] is the minimum code of length i, or -1 if there are no
+	// MinCodes[i] is the minimum code of length i, or -1 if there are no
 	// codes of that length.
-	minCodes [maxCodeLength]int32
-	// maxCodes[i] is the maximum code of length i, or -1 if there are no
+	MinCodes [maxCodeLength]int32
+	// MaxCodes[i] is the maximum code of length i, or -1 if there are no
 	// codes of that length.
-	maxCodes [maxCodeLength]int32
-	// valsIndices[i] is the index into vals of minCodes[i].
-	valsIndices [maxCodeLength]int32
+	MaxCodes [maxCodeLength]int32
+	// ValsIndices[i] is the index into vals of MinCodes[i].
+	ValsIndices [maxCodeLength]int32
 }
 
 // errShortHuffmanData means that an unexpected EOF occurred while decoding
@@ -167,17 +167,17 @@ func (d *decoder) processDHT(n int) error {
 			}
 		}
 
-		// Derive minCodes, maxCodes, and valsIndices.
+		// Derive MinCodes, MaxCodes, and ValsIndices.
 		var c, index int32
 		for i, n := range nCodes {
 			if n == 0 {
-				h.minCodes[i] = -1
-				h.maxCodes[i] = -1
-				h.valsIndices[i] = -1
+				h.MinCodes[i] = -1
+				h.MaxCodes[i] = -1
+				h.ValsIndices[i] = -1
 			} else {
-				h.minCodes[i] = c
-				h.maxCodes[i] = c + n - 1
-				h.valsIndices[i] = index
+				h.MinCodes[i] = c
+				h.MaxCodes[i] = c + n - 1
+				h.ValsIndices[i] = index
 				c += n
 				index += n
 			}
@@ -228,8 +228,8 @@ slowPath:
 		}
 		d.bits.n--
 		d.bits.m >>= 1
-		if code <= h.maxCodes[i] {
-			return h.Vals[h.valsIndices[i]+code-h.minCodes[i]], uint16(code), uint8(i + 1), nil
+		if code <= h.MaxCodes[i] {
+			return h.Vals[h.ValsIndices[i]+code-h.MinCodes[i]], uint16(code), uint8(i + 1), nil
 		}
 		code <<= 1
 	}

@@ -21,7 +21,7 @@ import (
 // zigzag maps from the natural ordering to the zig-zag ordering. For example,
 // zigzag[0*8 + 3] is the zig-zag sequence number of the element in the fourth
 // column and first row.
-var zigzag = [blockSize]int{
+var zigzag = [BlockSize]int{
 	0, 1, 5, 6, 14, 15, 27, 28,
 	2, 4, 7, 13, 16, 26, 29, 42,
 	3, 8, 12, 17, 25, 30, 41, 43,
@@ -33,7 +33,7 @@ var zigzag = [blockSize]int{
 }
 
 func TestZigUnzig(t *testing.T) {
-	for i := 0; i < blockSize; i++ {
+	for i := 0; i < BlockSize; i++ {
 		if Unzig[zigzag[i]] != i {
 			t.Errorf("Unzig[zigzag[%d]] == %d", i, Unzig[zigzag[i]])
 		}
@@ -45,7 +45,7 @@ func TestZigUnzig(t *testing.T) {
 
 // unscaledQuantInNaturalOrder are the unscaled quantization tables in
 // natural (not zig-zag) order, as specified in section K.1.
-var unscaledQuantInNaturalOrder = [nQuantIndex][blockSize]byte{
+var unscaledQuantInNaturalOrder = [nQuantIndex][BlockSize]byte{
 	// Luminance.
 	{
 		16, 11, 10, 16, 24, 40, 51, 61,
@@ -73,7 +73,7 @@ var unscaledQuantInNaturalOrder = [nQuantIndex][blockSize]byte{
 func TestUnscaledQuant(t *testing.T) {
 	bad := false
 	for i := quantIndex(0); i < nQuantIndex; i++ {
-		for zig := 0; zig < blockSize; zig++ {
+		for zig := 0; zig < BlockSize; zig++ {
 			got := unscaledQuant[i][zig]
 			want := unscaledQuantInNaturalOrder[i][Unzig[zig]]
 			if got != want {
@@ -87,7 +87,7 @@ func TestUnscaledQuant(t *testing.T) {
 		buf := &strings.Builder{}
 		for i, name := range names {
 			fmt.Fprintf(buf, "// %s.\n{\n", name)
-			for zig := 0; zig < blockSize; zig++ {
+			for zig := 0; zig < BlockSize; zig++ {
 				fmt.Fprintf(buf, "%d, ", unscaledQuantInNaturalOrder[i][Unzig[zig]])
 				if zig%8 == 7 {
 					buf.WriteString("\n")

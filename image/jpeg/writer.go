@@ -52,7 +52,7 @@ const (
 // encoder copies and scales the tables according to its quality parameter.
 // The values are derived from section K.1 of the spec, after converting from
 // natural to zig-zag order.
-var unscaledQuant = [nQuantIndex][blockSize]byte{
+var unscaledQuant = [nQuantIndex][BlockSize]byte{
 	// Luminance.
 	{
 		16, 11, 12, 14, 12, 10, 16, 14,
@@ -231,7 +231,7 @@ type encoder struct {
 	// bits and nBits are accumulated bits to write to w.
 	bits, nBits uint32
 	// quant is the scaled quantization tables, in zig-zag order.
-	quant [nQuantIndex][blockSize]byte
+	quant [nQuantIndex][BlockSize]byte
 }
 
 func (e *encoder) flush() {
@@ -309,7 +309,7 @@ func (e *encoder) writeMarkerHeader(marker uint8, markerlen int) {
 
 // writeDQT writes the Define Quantization Table marker.
 func (e *encoder) writeDQT() {
-	const markerlen = 2 + int(nQuantIndex)*(1+blockSize)
+	const markerlen = 2 + int(nQuantIndex)*(1+BlockSize)
 	e.writeMarkerHeader(dqtMarker, markerlen)
 	for i := range e.quant {
 		e.writeByte(uint8(i))
@@ -375,7 +375,7 @@ func (e *encoder) writeBlock(b *Block, q quantIndex, prevDC int32) int32 {
 	e.emitHuffRLE(huffIndex(2*q+0), 0, dc-prevDC)
 	// Emit the AC components.
 	h, runLength := huffIndex(2*q+1), int32(0)
-	for zig := 1; zig < blockSize; zig++ {
+	for zig := 1; zig < BlockSize; zig++ {
 		ac := Div(b[Unzig[zig]], 8*int32(e.quant[q][zig]))
 		if ac == 0 {
 			runLength++
@@ -577,7 +577,7 @@ const DefaultQuality = 75
 // Quality ranges from 1 to 100 inclusive, higher is better.
 type Options struct {
 	Quality int
-	Quant   [nQuantIndex][blockSize]byte
+	Quant   [nQuantIndex][BlockSize]byte
 }
 
 // Encode writes the Image m to w in JPEG 4:2:0 baseline format with the given

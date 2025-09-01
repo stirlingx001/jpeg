@@ -127,13 +127,13 @@ func (d *decoder) processSOS(n int) error {
 	//
 	// For sequential JPEGs, these parameters are hard-coded to 0/63/0/0, as
 	// per table B.3.
-	zigStart, zigEnd, ah, al := int32(0), int32(blockSize-1), uint32(0), uint32(0)
+	zigStart, zigEnd, ah, al := int32(0), int32(BlockSize-1), uint32(0), uint32(0)
 	if d.progressive {
 		zigStart = int32(d.tmp[1+2*nComp])
 		zigEnd = int32(d.tmp[2+2*nComp])
 		ah = uint32(d.tmp[3+2*nComp] >> 4)
 		al = uint32(d.tmp[3+2*nComp] & 0x0f)
-		if (zigStart == 0 && zigEnd != 0) || zigStart > zigEnd || blockSize <= zigEnd {
+		if (zigStart == 0 && zigEnd != 0) || zigStart > zigEnd || BlockSize <= zigEnd {
 			return FormatError("bad spectral selection bounds")
 		}
 		if zigStart != 0 && nComp != 1 {
@@ -501,7 +501,7 @@ func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 	d.aux.ComponentBlocks[compIndex] = append(d.aux.ComponentBlocks[compIndex], tmp)
 
 	qt := &d.quant[d.comp[compIndex].Tq]
-	for zig := 0; zig < blockSize; zig++ {
+	for zig := 0; zig < BlockSize; zig++ {
 		b[Unzig[zig]] *= qt[zig]
 	}
 	idct(b)

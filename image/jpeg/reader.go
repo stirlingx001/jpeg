@@ -75,7 +75,7 @@ const (
 // Unzig maps from the zig-zag ordering to the natural ordering. For example,
 // Unzig[3] is the column and row of the fourth element in zig-zag order. The
 // Value is 16, which means first column (16%8 == 0) and third row (16/8 == 2).
-var Unzig = [blockSize]int{
+var Unzig = [BlockSize]int{
 	0, 1, 8, 16, 9, 2, 3, 10,
 	17, 24, 32, 25, 18, 11, 4, 5,
 	12, 19, 26, 33, 40, 48, 41, 34,
@@ -175,7 +175,7 @@ type decoder struct {
 	progCoeffs [maxComponents][]Block // Saved state between progressive-mode scans.
 	huff       [maxTc + 1][maxTh + 1]Huffman
 	quant      [maxTq + 1]Block // Quantization tables, in zig-zag order.
-	tmp        [2 * blockSize]byte
+	tmp        [2 * BlockSize]byte
 
 	aux *Auxiliary
 }
@@ -488,11 +488,11 @@ loop:
 		default:
 			return FormatError("bad Pq Value")
 		case 0:
-			if n < blockSize {
+			if n < BlockSize {
 				break loop
 			}
-			n -= blockSize
-			if err := d.readFull(d.tmp[:blockSize]); err != nil {
+			n -= BlockSize
+			if err := d.readFull(d.tmp[:BlockSize]); err != nil {
 				return err
 			}
 			for i := range d.quant[tq] {
@@ -500,11 +500,11 @@ loop:
 			}
 
 		case 1:
-			if n < 2*blockSize {
+			if n < 2*BlockSize {
 				break loop
 			}
-			n -= 2 * blockSize
-			if err := d.readFull(d.tmp[:2*blockSize]); err != nil {
+			n -= 2 * BlockSize
+			if err := d.readFull(d.tmp[:2*BlockSize]); err != nil {
 				return err
 			}
 			for i := range d.quant[tq] {

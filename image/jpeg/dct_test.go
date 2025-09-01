@@ -160,7 +160,7 @@ var cosines = [32]float64{
 //
 // b acts as both dst and src.
 func slowFDCT(b *Block) {
-	var dst [blockSize]float64
+	var dst [BlockSize]float64
 	for v := 0; v < 8; v++ {
 		for u := 0; u < 8; u++ {
 			sum := 0.0
@@ -190,7 +190,7 @@ func slowFDCT(b *Block) {
 //
 // b acts as both dst and src.
 func slowIDCT(b *Block) {
-	var dst [blockSize]float64
+	var dst [BlockSize]float64
 	for y := 0; y < 8; y++ {
 		for x := 0; x < 8; x++ {
 			sum := 0.0

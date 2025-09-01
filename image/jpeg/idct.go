@@ -37,9 +37,9 @@ package jpeg
  *
  */
 
-const blockSize = 64 // A DCT Block is 8x8.
+const BlockSize = 64 // A DCT Block is 8x8.
 
-type Block [blockSize]int32
+type Block [BlockSize]int32
 
 const (
 	w1 = 2841 // 2048*sqrt(2)*cos(1*pi/16)
