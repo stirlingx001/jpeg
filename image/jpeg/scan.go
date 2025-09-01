@@ -216,6 +216,8 @@ func (d *decoder) processSOS(n int) error {
 						}
 					}
 
+					var bitstream []BitstreamItem
+
 					// Load the previous partially decoded coefficients, if applicable.
 					if d.progressive {
 						b = d.progCoeffs[compIndex][by*mxx*hi+bx]
@@ -232,17 +234,24 @@ func (d *decoder) processSOS(n int) error {
 						if zig == 0 {
 							zig++
 							// Decode the DC coefficient, as specified in section F.2.2.1.
-							value, err := d.decodeHuffman(&d.huff[DcTable][scan[i].Td])
+							value, code, bitsLen, err := d.decodeHuffman(&d.huff[DcTable][scan[i].Td])
 							if err != nil {
 								return err
 							}
 							if value > 16 {
 								return UnsupportedError("excessive DC Component")
 							}
-							dcDelta, err := d.receiveExtend(value)
+
+							dcDelta, extend, err := d.receiveExtend(value)
 							if err != nil {
 								return err
 							}
+							item := BitstreamItem{
+								Code:        code,
+								CodeBitsLen: bitsLen,
+								Extend:      extend,
+							}
+							bitstream = append(bitstream, item)
 							dc[compIndex] += dcDelta
 							b[0] = dc[compIndex] << al
 						}
@@ -253,10 +262,11 @@ func (d *decoder) processSOS(n int) error {
 							// Decode the AC coefficients, as specified in section F.2.2.2.
 							huff := &d.huff[AcTable][scan[i].Ta]
 							for ; zig <= zigEnd; zig++ {
-								value, err := d.decodeHuffman(huff)
+								value, code, bitsLen, err := d.decodeHuffman(huff)
 								if err != nil {
 									return err
 								}
+
 								val0 := value >> 4
 								val1 := value & 0x0f
 								if val1 != 0 {
@@ -264,11 +274,19 @@ func (d *decoder) processSOS(n int) error {
 									if zig > zigEnd {
 										break
 									}
-									ac, err := d.receiveExtend(val1)
+									ac, extend, err := d.receiveExtend(val1)
 									if err != nil {
 										return err
 									}
 									b[Unzig[zig]] = ac << al
+
+									item := BitstreamItem{
+										Code:        code,
+										CodeBitsLen: bitsLen,
+										Extend:      extend,
+									}
+									bitstream = append(bitstream, item)
+
 								} else {
 									if val0 != 0x0f {
 										d.eobRun = uint16(1 << val0)
@@ -358,7 +376,7 @@ func (d *decoder) refine(b *Block, h *Huffman, zigStart, zigEnd, delta int32) er
 	loop:
 		for ; zig <= zigEnd; zig++ {
 			z := int32(0)
-			value, err := d.decodeHuffman(h)
+			value, _, _, err := d.decodeHuffman(h)
 			if err != nil {
 				return err
 			}
@@ -466,6 +484,10 @@ func (d *decoder) reconstructProgressiveImage() error {
 // reconstructBlock dequantizes, performs the inverse DCT and stores the Block
 // to the image.
 func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
+	var tmp Block
+	copy(tmp[:], b[:])
+	d.aux.ComponentBlocks[compIndex] = append(d.aux.ComponentBlocks[compIndex], tmp)
+
 	qt := &d.quant[d.comp[compIndex].Tq]
 	for zig := 0; zig < blockSize; zig++ {
 		b[Unzig[zig]] *= qt[zig]
@@ -490,7 +512,6 @@ func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 	}
 	// Level shift by +128, clip to [0, 255], and write to dst.
 
-	var tmp Block
 	for y := 0; y < 8; y++ {
 		y8 := y * 8
 		yStride := y * stride
@@ -507,7 +528,7 @@ func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 			tmp[y8+x] = c
 		}
 	}
-	d.aux.ComponentBlocks[compIndex] = append(d.aux.ComponentBlocks[compIndex], tmp)
+
 	return nil
 }
 

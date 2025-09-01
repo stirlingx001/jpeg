@@ -74,20 +74,21 @@ func (d *decoder) ensureNBits(n int32) error {
 
 // receiveExtend is the composition of RECEIVE and EXTEND, specified in section
 // F.2.2.1.
-func (d *decoder) receiveExtend(t uint8) (int32, error) {
+func (d *decoder) receiveExtend(t uint8) (int32, int32, error) {
 	if d.bits.n < int32(t) {
 		if err := d.ensureNBits(int32(t)); err != nil {
-			return 0, err
+			return 0, 0, err
 		}
 	}
 	d.bits.n -= int32(t)
 	d.bits.m >>= t
 	s := int32(1) << t
 	x := int32(d.bits.a>>uint8(d.bits.n)) & (s - 1)
+	x0 := x
 	if x < s>>1 {
 		x += ((-1) << t) + 1
 	}
-	return x, nil
+	return x, x0, nil
 }
 
 // processDHT processes a Define Huffman Table marker, and initializes a Huffman
@@ -184,15 +185,15 @@ func (d *decoder) processDHT(n int) error {
 
 // decodeHuffman returns the next Huffman-coded Value from the bit-stream,
 // decoded according to H.
-func (d *decoder) decodeHuffman(h *Huffman) (uint8, error) {
+func (d *decoder) decodeHuffman(h *Huffman) (uint8, uint8, uint8, error) {
 	if h.NCodes == 0 {
-		return 0, FormatError("uninitialized Huffman table")
+		return 0, 0, 0, FormatError("uninitialized Huffman table")
 	}
 
 	if d.bits.n < 8 {
 		if err := d.ensureNBits(8); err != nil {
 			if err != errMissingFF00 && err != errShortHuffmanData {
-				return 0, err
+				return 0, 0, 0, err
 			}
 			// There are no more bytes of data in this segment, but we may still
 			// be able to read the next symbol out of the previously read bits.
@@ -204,17 +205,18 @@ func (d *decoder) decodeHuffman(h *Huffman) (uint8, error) {
 		}
 	}
 	if v := h.Lut[(d.bits.a>>uint32(d.bits.n-lutSize))&0xff]; v != 0 {
+		code := (d.bits.a >> uint32(d.bits.n-lutSize)) & 0xff
 		n := (v & 0xff) - 1
 		d.bits.n -= int32(n)
 		d.bits.m >>= n
-		return uint8(v >> 8), nil
+		return uint8(v >> 8), uint8(code), uint8(n), nil
 	}
 
 slowPath:
 	for i, code := 0, int32(0); i < maxCodeLength; i++ {
 		if d.bits.n == 0 {
 			if err := d.ensureNBits(1); err != nil {
-				return 0, err
+				return 0, 0, 0, err
 			}
 		}
 		if d.bits.a&d.bits.m != 0 {
@@ -223,11 +225,11 @@ slowPath:
 		d.bits.n--
 		d.bits.m >>= 1
 		if code <= h.maxCodes[i] {
-			return h.Vals[h.valsIndices[i]+code-h.minCodes[i]], nil
+			return h.Vals[h.valsIndices[i]+code-h.minCodes[i]], uint8(code), uint8(i + 1), nil
 		}
 		code <<= 1
 	}
-	return 0, FormatError("bad Huffman code")
+	return 0, 0, 0, FormatError("bad Huffman code")
 }
 
 func (d *decoder) decodeBit() (bool, error) {

@@ -108,6 +108,12 @@ type Scan struct {
 	Ta        uint8 // AC table selector.
 }
 
+type BitstreamItem struct {
+	CodeBitsLen uint8
+	Code        uint8
+	Extend      int32
+}
+
 type Auxiliary struct {
 	DQTStart, DQTN, DQTLen int
 	SOFStart, SOFN, SOFLen int
@@ -123,6 +129,7 @@ type Auxiliary struct {
 	Img3            *image.YCbCr
 	ComponentBlocks [maxComponents][]Block // Component blocks in encoding order
 	Comp            [maxComponents]Component
+	BitstreamItems  [maxComponents][][]BitstreamItem
 }
 
 type decoder struct {
