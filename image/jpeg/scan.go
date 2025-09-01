@@ -5,6 +5,7 @@
 package jpeg
 
 import (
+	"fmt"
 	"image"
 )
 
@@ -256,9 +257,9 @@ func (d *decoder) processSOS(n int) error {
 							b[0] = dc[compIndex] << al
 						}
 
-						if zig <= zigEnd && d.eobRun > 0 {
+						if zig <= zigEnd && d.eobRun > 0 { // cond0
 							d.eobRun--
-						} else {
+						} else { // cond1
 							// Decode the AC coefficients, as specified in section F.2.2.2.
 							huff := &d.huff[AcTable][scan[i].Ta]
 							for ; zig <= zigEnd; zig++ {
@@ -269,11 +270,12 @@ func (d *decoder) processSOS(n int) error {
 
 								val0 := value >> 4
 								val1 := value & 0x0f
-								if val1 != 0 {
+								if val1 != 0 { // cond2
 									zig += int32(val0)
-									if zig > zigEnd {
+									if zig > zigEnd { // cond3
 										break
 									}
+									// cond4
 									ac, extend, err := d.receiveExtend(val1)
 									if err != nil {
 										return err
@@ -287,10 +289,10 @@ func (d *decoder) processSOS(n int) error {
 									}
 									bitstream = append(bitstream, item)
 
-								} else {
-									if val0 != 0x0f {
+								} else { // cond5
+									if val0 != 0x0f { // cond6
 										d.eobRun = uint16(1 << val0)
-										if val0 != 0 {
+										if val0 != 0 { // cond7
 											bits, err := d.decodeBits(int32(val0))
 											if err != nil {
 												return err
@@ -303,11 +305,11 @@ func (d *decoder) processSOS(n int) error {
 												Extend:      0,
 											}
 											bitstream = append(bitstream, item)
-
 										}
 										d.eobRun--
 										break
 									}
+									// cond8
 									zig += 0x0f
 								}
 							}
@@ -328,8 +330,20 @@ func (d *decoder) processSOS(n int) error {
 					}
 					if d.aux.BitstreamItems[compIndex] == nil {
 						d.aux.BitstreamItems[compIndex] = make([][]BitstreamItem, 0)
-						d.aux.BitstreamItems[compIndex] = append(d.aux.BitstreamItems[compIndex], bitstream)
 					}
+
+					d.aux.BitstreamItems[compIndex] = append(d.aux.BitstreamItems[compIndex], bitstream)
+					d.aux.ComponentBlocks[compIndex] = append(d.aux.ComponentBlocks[compIndex], b)
+
+					if my == 0 && mx == 0 && i == 0 {
+						//fmt.Printf("b0: %v\n", b)
+						fmt.Printf("b: ")
+						for kk := 0; kk < 64; kk++ {
+							fmt.Printf("%d ", uint32(b[kk]))
+						}
+						fmt.Println("")
+					}
+
 					if err := d.reconstructBlock(&b, bx, by, int(compIndex)); err != nil {
 						return err
 					}
