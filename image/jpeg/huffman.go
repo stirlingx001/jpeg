@@ -74,6 +74,7 @@ func (d *decoder) ensureNBits(n int32) error {
 
 // receiveExtend is the composition of RECEIVE and EXTEND, specified in section
 // F.2.2.1.
+// t <= 16
 func (d *decoder) receiveExtend(t uint8) (int32, int32, error) {
 	if d.bits.n < int32(t) {
 		if err := d.ensureNBits(int32(t)); err != nil {
@@ -83,10 +84,13 @@ func (d *decoder) receiveExtend(t uint8) (int32, int32, error) {
 	d.bits.n -= int32(t)
 	d.bits.m >>= t
 	s := int32(1) << t
-	x := int32(d.bits.a>>uint8(d.bits.n)) & (s - 1)
+	x := int32(d.bits.a>>uint8(d.bits.n)) & (s - 1) // positive
 	x0 := x
 	if x < s>>1 {
-		x += ((-1) << t) + 1
+		//x := (1 << t) - 1 - x //  positive
+		//x = -x  // negative
+
+		x += int32((-1)<<t) + 1 // negative
 	}
 	return x, x0, nil
 }
