@@ -296,6 +296,14 @@ func (d *decoder) processSOS(n int) error {
 												return err
 											}
 											d.eobRun |= uint16(bits)
+
+											item := BitstreamItem{
+												Code:        uint16(bits),
+												CodeBitsLen: bitsLen,
+												Extend:      0,
+											}
+											bitstream = append(bitstream, item)
+
 										}
 										d.eobRun--
 										break

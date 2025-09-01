@@ -110,7 +110,7 @@ type Scan struct {
 
 type BitstreamItem struct {
 	CodeBitsLen uint8
-	Code        uint8
+	Code        uint16
 	Extend      int32
 }
 

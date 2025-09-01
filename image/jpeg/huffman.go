@@ -185,7 +185,7 @@ func (d *decoder) processDHT(n int) error {
 
 // decodeHuffman returns the next Huffman-coded Value from the bit-stream,
 // decoded according to H.
-func (d *decoder) decodeHuffman(h *Huffman) (uint8, uint8, uint8, error) {
+func (d *decoder) decodeHuffman(h *Huffman) (uint8, uint16, uint8, error) {
 	if h.NCodes == 0 {
 		return 0, 0, 0, FormatError("uninitialized Huffman table")
 	}
@@ -209,7 +209,7 @@ func (d *decoder) decodeHuffman(h *Huffman) (uint8, uint8, uint8, error) {
 		n := (v & 0xff) - 1
 		d.bits.n -= int32(n)
 		d.bits.m >>= n
-		return uint8(v >> 8), uint8(code), uint8(n), nil
+		return uint8(v >> 8), uint16(code), uint8(n), nil
 	}
 
 slowPath:
@@ -225,7 +225,7 @@ slowPath:
 		d.bits.n--
 		d.bits.m >>= 1
 		if code <= h.maxCodes[i] {
-			return h.Vals[h.valsIndices[i]+code-h.minCodes[i]], uint8(code), uint8(i + 1), nil
+			return h.Vals[h.valsIndices[i]+code-h.minCodes[i]], uint16(code), uint8(i + 1), nil
 		}
 		code <<= 1
 	}
