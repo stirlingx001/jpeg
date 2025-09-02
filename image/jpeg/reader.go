@@ -126,7 +126,7 @@ type Auxiliary struct {
 	Scans           [maxComponents]Scan
 	Quant           [maxTq + 1]Block
 	Huff            [maxTc + 1][maxTh + 1]Huffman
-	Img3            *image.YCbCr
+	ExtImg3         *image.YCbCr
 	ComponentBlocks [maxComponents][]Block // Component blocks in encoding order
 	Comp            [maxComponents]Component
 	BitstreamItems  [maxComponents][][]BitstreamItem
@@ -714,7 +714,6 @@ func (d *decoder) decode(r io.Reader, configOnly bool) (image.Image, *Auxiliary,
 		d.aux.Height = d.height
 		d.aux.Width = d.width
 		d.aux.NComp = d.nComp
-		d.aux.Img3 = d.img3
 		d.aux.Huff = d.huff
 		d.aux.Quant = d.quant
 		d.aux.Comp = d.comp

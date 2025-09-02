@@ -5,8 +5,13 @@
 package jpeg
 
 import (
-	"fmt"
 	"image"
+)
+
+var gg = -1
+
+const (
+	GG = 47
 )
 
 // makeImg allocates and initializes the destination image.
@@ -40,6 +45,8 @@ func (d *decoder) makeImg(mxx, myy int) {
 	}
 	m := image.NewYCbCr(image.Rect(0, 0, 8*h0*mxx, 8*v0*myy), subsampleRatio)
 	d.img3 = m.SubImage(image.Rect(0, 0, d.width, d.height)).(*image.YCbCr)
+
+	d.aux.ExtImg3 = m
 
 	if d.nComp == 4 {
 		h3, v3 := d.comp[3].H, d.comp[3].V
@@ -179,6 +186,7 @@ func (d *decoder) processSOS(n int) error {
 				hi := d.comp[compIndex].H
 				vi := d.comp[compIndex].V
 				for j := 0; j < hi*vi; j++ {
+					gg++
 					// The blocks are traversed one MCU at a time. For 4:2:0 chroma
 					// subsampling, there are four Y 8x8 blocks in every 16x16 MCU.
 					//
@@ -282,6 +290,13 @@ func (d *decoder) processSOS(n int) error {
 									}
 									b[Unzig[zig]] = ac << al
 
+									//if gg == GG {
+									//	if zig == 33 {
+									//		fmt.Println("k0:", zig, val0, uint32(ac))
+									//	}
+									//	fmt.Printf("xx: %v %v %v\n", zig, val0, uint32(ac))
+									//}
+
 									item := BitstreamItem{
 										Code:        code,
 										CodeBitsLen: bitsLen,
@@ -290,6 +305,13 @@ func (d *decoder) processSOS(n int) error {
 									bitstream = append(bitstream, item)
 
 								} else { // cond5
+									item := BitstreamItem{
+										Code:        code,
+										CodeBitsLen: bitsLen,
+										Extend:      0,
+									}
+									bitstream = append(bitstream, item)
+
 									if val0 != 0x0f { // cond6
 										d.eobRun = uint16(1 << val0)
 										if val0 != 0 { // cond7
@@ -335,14 +357,14 @@ func (d *decoder) processSOS(n int) error {
 					d.aux.BitstreamItems[compIndex] = append(d.aux.BitstreamItems[compIndex], bitstream)
 					d.aux.ComponentBlocks[compIndex] = append(d.aux.ComponentBlocks[compIndex], b)
 
-					if my == 0 && mx == 0 && i == 0 {
-						//fmt.Printf("b0: %v\n", b)
-						fmt.Printf("b: ")
-						for kk := 0; kk < 64; kk++ {
-							fmt.Printf("%d ", uint32(b[kk]))
-						}
-						fmt.Println("")
-					}
+					//if gg == GG {
+					//	//fmt.Printf("b0: %v\n", b)
+					//	fmt.Printf("b: ")
+					//	for kk := 0; kk < 64; kk++ {
+					//		fmt.Printf("%d ", uint32(b[kk]))
+					//	}
+					//	fmt.Println("")
+					//}
 
 					if err := d.reconstructBlock(&b, bx, by, int(compIndex)); err != nil {
 						return err
@@ -518,7 +540,26 @@ func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 	for zig := 0; zig < BlockSize; zig++ {
 		b[Unzig[zig]] *= qt[zig]
 	}
+
+	//if gg == 1 {
+	//	fmt.Printf("qt: ")
+	//	for kk := 0; kk < 64; kk++ {
+	//		fmt.Printf("%d ", uint32(qt[kk]))
+	//	}
+	//	fmt.Println("")
+	//}
+
 	idct(b)
+
+	//if gg == GG {
+	//	//fmt.Printf("b0: %v\n", b)
+	//	fmt.Printf("res: ")
+	//	for kk := 0; kk < 64; kk++ {
+	//		fmt.Printf("%d ", uint32(b[kk]))
+	//	}
+	//	fmt.Println("")
+	//}
+
 	dst, stride := []byte(nil), 0
 	if d.nComp == 1 {
 		dst, stride = d.img1.Pix[8*(by*d.img1.Stride+bx):], d.img1.Stride
@@ -537,7 +578,7 @@ func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 		}
 	}
 	// Level shift by +128, clip to [0, 255], and write to dst.
-
+	var tmp2 [8 * 8]int32
 	for y := 0; y < 8; y++ {
 		y8 := y * 8
 		yStride := y * stride
@@ -551,9 +592,19 @@ func (d *decoder) reconstructBlock(b *Block, bx, by, compIndex int) error {
 				c += 128
 			}
 			dst[yStride+x] = uint8(c)
-			tmp[y8+x] = c
+			tmp2[y*8+x] = c
 		}
 	}
+
+	//if gg == GG {
+	//	fmt.Printf("pos: %v\n", 8*(by*d.img3.YStride+bx))
+	//
+	//	fmt.Printf("res: ")
+	//	for kk := 0; kk < 64; kk++ {
+	//		fmt.Printf("%d ", uint32(tmp2[kk]))
+	//	}
+	//	fmt.Println("")
+	//}
 
 	return nil
 }
