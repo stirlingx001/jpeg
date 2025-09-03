@@ -282,6 +282,11 @@ func (d *decoder) processSOS(n int) error {
 								if val1 != 0 { // cond2
 									zig += int32(val0)
 									if zig > zigEnd { // cond3
+										item := BitstreamItem{
+											Code:        code,
+											CodeBitsLen: bitsLen,
+										}
+										bitstream = append(bitstream, item)
 										break
 									}
 									// cond4
@@ -290,14 +295,6 @@ func (d *decoder) processSOS(n int) error {
 										return err
 									}
 									b[Unzig[zig]] = ac << al
-
-									//if gg == GG {
-									//	if zig == 33 {
-									//		fmt.Println("k0:", zig, val0, uint32(ac))
-									//	}
-									//	fmt.Printf("xx: %v %v %v\n", zig, val0, uint32(ac))
-									//}
-
 									item := BitstreamItem{
 										Code:          code,
 										CodeBitsLen:   bitsLen,
@@ -306,15 +303,14 @@ func (d *decoder) processSOS(n int) error {
 									}
 									bitstream = append(bitstream, item)
 
-								} else { // cond5
-									item := BitstreamItem{
-										Code:          code,
-										CodeBitsLen:   bitsLen,
-										Extend:        0,
-										ExtendBitsLen: 0,
-									}
-									bitstream = append(bitstream, item)
+									//if gg == GG {
+									//	if zig == 33 {
+									//		fmt.Println("k0:", zig, val0, uint32(ac))
+									//	}
+									//	fmt.Printf("xx: %v %v %v\n", zig, val0, uint32(ac))
+									//}
 
+								} else { // cond5 == !cond2
 									if val0 != 0x0f { // cond6
 										d.eobRun = uint16(1 << val0)
 										if val0 != 0 { // cond7
@@ -323,18 +319,30 @@ func (d *decoder) processSOS(n int) error {
 												return err
 											}
 											d.eobRun |= uint16(bits)
-
 											item := BitstreamItem{
-												Code:          uint16(bits),
+												Code:          code,
 												CodeBitsLen:   bitsLen,
-												Extend:        0,
-												ExtendBitsLen: 0,
+												Extend:        int32(bits),
+												ExtendBitsLen: val0,
+											}
+											bitstream = append(bitstream, item)
+										} else {
+											item := BitstreamItem{
+												Code:        code,
+												CodeBitsLen: bitsLen,
 											}
 											bitstream = append(bitstream, item)
 										}
 										d.eobRun--
 										break
 									}
+
+									item := BitstreamItem{
+										Code:        code,
+										CodeBitsLen: bitsLen,
+									}
+									bitstream = append(bitstream, item)
+
 									// cond8
 									zig += 0x0f
 								}
