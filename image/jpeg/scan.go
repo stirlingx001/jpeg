@@ -256,9 +256,10 @@ func (d *decoder) processSOS(n int) error {
 								return err
 							}
 							item := BitstreamItem{
-								Code:        code,
-								CodeBitsLen: bitsLen,
-								Extend:      extend,
+								Code:          code,
+								CodeBitsLen:   bitsLen,
+								Extend:        extend,
+								ExtendBitsLen: value,
 							}
 							bitstream = append(bitstream, item)
 							dc[compIndex] += dcDelta
@@ -307,9 +308,10 @@ func (d *decoder) processSOS(n int) error {
 
 								} else { // cond5
 									item := BitstreamItem{
-										Code:        code,
-										CodeBitsLen: bitsLen,
-										Extend:      0,
+										Code:          code,
+										CodeBitsLen:   bitsLen,
+										Extend:        0,
+										ExtendBitsLen: 0,
 									}
 									bitstream = append(bitstream, item)
 
@@ -323,9 +325,10 @@ func (d *decoder) processSOS(n int) error {
 											d.eobRun |= uint16(bits)
 
 											item := BitstreamItem{
-												Code:        uint16(bits),
-												CodeBitsLen: bitsLen,
-												Extend:      0,
+												Code:          uint16(bits),
+												CodeBitsLen:   bitsLen,
+												Extend:        0,
+												ExtendBitsLen: 0,
 											}
 											bitstream = append(bitstream, item)
 										}
