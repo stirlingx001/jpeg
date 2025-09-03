@@ -298,9 +298,10 @@ func (d *decoder) processSOS(n int) error {
 									//}
 
 									item := BitstreamItem{
-										Code:        code,
-										CodeBitsLen: bitsLen,
-										Extend:      extend,
+										Code:          code,
+										CodeBitsLen:   bitsLen,
+										Extend:        extend,
+										ExtendBitsLen: val1,
 									}
 									bitstream = append(bitstream, item)
 

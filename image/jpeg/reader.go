@@ -109,9 +109,10 @@ type Scan struct {
 }
 
 type BitstreamItem struct {
-	CodeBitsLen uint8
-	Code        uint16
-	Extend      int32
+	CodeBitsLen   uint8
+	Code          uint16
+	ExtendBitsLen uint8
+	Extend        int32
 }
 
 type Auxiliary struct {
